@@ -33,23 +33,3 @@ Sinta-se à vontade para contribuir para este projeto! Se você encontrar algum 
 **Aviso:**
 
 Esta aplicação está em constante desenvolvimento. Novas funcionalidades e melhorias serão adicionadas com o tempo.
-
-**Vamos juntos construir a melhor experiência de busca de animes!**
-
----
-
-**Dicas extras para o seu README:**
-
-* **Imagens:** Adicione imagens ou GIFs para ilustrar como a aplicação funciona.
-* **Vídeos:** Se você tiver um vídeo demonstrando a aplicação, inclua o link.
-* **Licença:** Especifique a licença do seu projeto (por exemplo, MIT, GPL).
-* **Agradecimentos:** Agradeça a qualquer pessoa que tenha contribuído para o projeto.
-* **Links úteis:** Inclua links para a documentação das tecnologias utilizadas.
-
-**Observações:**
-
-* **Personalize:** Adapte este README para refletir o seu projeto e suas preferências.
-* **Clareza:** Use uma linguagem clara e concisa para que qualquer pessoa possa entender o seu projeto.
-* **Organização:** Mantenha o README bem organizado e fácil de navegar.
-
-Com este README, você terá um guia completo para o seu projeto e facilitará a vida de qualquer pessoa que queira contribuir ou utilizar a sua aplicação.
