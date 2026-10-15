@@ -1,6 +1,6 @@
-/** Nota no formato usado pelo MyAnimeList: sempre com duas casas decimais (8 → "8.00"). */
+/** Nota de 0 a 10 sempre com uma casa decimal (8 → "8.0"). */
 export function formatScore(score: number): string {
-  return score.toFixed(2)
+  return score.toFixed(1)
 }
 
 /** Resumo da quantidade de resultados, ex.: "Exibindo 12 de 87 resultados para “naruto”". */

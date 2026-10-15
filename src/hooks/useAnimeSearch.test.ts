@@ -1,15 +1,15 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  JikanHttpError,
+  ApiHttpError,
   type SearchAnimePage,
   searchAnime,
-} from '../services/jikan.ts'
-import { deferred, makeJikanAnime } from '../test/fixtures.ts'
+} from '../services/anilist.ts'
+import { deferred, makeMedia } from '../test/fixtures.ts'
 import { useAnimeSearch } from './useAnimeSearch.ts'
 
-vi.mock('../services/jikan.ts', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../services/jikan.ts')>()),
+vi.mock('../services/anilist.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/anilist.ts')>()),
   searchAnime: vi.fn(),
 }))
 
@@ -48,9 +48,7 @@ describe('useAnimeSearch', () => {
     )
 
     await act(async () => {
-      response.resolve(
-        page([makeJikanAnime()], { hasNextPage: true, total: 40 }),
-      )
+      response.resolve(page([makeMedia()], { hasNextPage: true, total: 40 }))
     })
 
     expect(result.current.state).toMatchObject({
@@ -60,7 +58,7 @@ describe('useAnimeSearch', () => {
       total: 40,
     })
     expect(result.current.state.results.map((anime) => anime.title)).toEqual([
-      'Naruto',
+      'NARUTO',
     ])
   })
 
@@ -85,13 +83,13 @@ describe('useAnimeSearch', () => {
 
   it('guarda o erro e permite tentar de novo', async () => {
     searchAnimeMock
-      .mockRejectedValueOnce(new JikanHttpError(503))
-      .mockResolvedValueOnce(page([makeJikanAnime()]))
+      .mockRejectedValueOnce(new ApiHttpError(503))
+      .mockResolvedValueOnce(page([makeMedia()]))
     const { result } = renderHook(() => useAnimeSearch())
 
     await act(() => result.current.search('naruto'))
     expect(result.current.state.status).toBe('error')
-    expect(result.current.state.error).toBeInstanceOf(JikanHttpError)
+    expect(result.current.state.error).toBeInstanceOf(ApiHttpError)
 
     act(() => result.current.retry())
     await waitFor(() => expect(result.current.state.status).toBe('success'))
@@ -118,10 +116,10 @@ describe('useAnimeSearch', () => {
     expect(firstSignal?.aborted).toBe(true)
 
     await act(async () => {
-      fast.resolve(page([makeJikanAnime({ mal_id: 269, title: 'Bleach' })]))
+      fast.resolve(page([makeMedia({ id: 269, title: { romaji: 'Bleach' } })]))
     })
     await act(async () => {
-      slow.resolve(page([makeJikanAnime({ title: 'Naruto' })]))
+      slow.resolve(page([makeMedia({ title: { romaji: 'Naruto' } })]))
     })
 
     expect(result.current.state.query).toBe('bleach')
@@ -133,7 +131,7 @@ describe('useAnimeSearch', () => {
   it('carrega a próxima página e ignora itens repetidos', async () => {
     searchAnimeMock
       .mockResolvedValueOnce(
-        page([makeJikanAnime({ mal_id: 1, title: 'A' })], {
+        page([makeMedia({ id: 1, title: { romaji: 'A' } })], {
           hasNextPage: true,
           total: 3,
         }),
@@ -141,8 +139,8 @@ describe('useAnimeSearch', () => {
       .mockResolvedValueOnce(
         page(
           [
-            makeJikanAnime({ mal_id: 1, title: 'A' }),
-            makeJikanAnime({ mal_id: 2, title: 'B' }),
+            makeMedia({ id: 1, title: { romaji: 'A' } }),
+            makeMedia({ id: 2, title: { romaji: 'B' } }),
           ],
           { page: 2, hasNextPage: false, total: 3 },
         ),
@@ -169,10 +167,10 @@ describe('useAnimeSearch', () => {
   it('mantém os resultados quando "carregar mais" falha e permite tentar de novo', async () => {
     searchAnimeMock
       .mockResolvedValueOnce(
-        page([makeJikanAnime({ mal_id: 1 })], { hasNextPage: true }),
+        page([makeMedia({ id: 1 })], { hasNextPage: true }),
       )
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce(page([makeJikanAnime({ mal_id: 2 })], { page: 2 }))
+      .mockResolvedValueOnce(page([makeMedia({ id: 2 })], { page: 2 }))
     const { result } = renderHook(() => useAnimeSearch())
 
     await act(() => result.current.search('a'))

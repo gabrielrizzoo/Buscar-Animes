@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import { searchAnime } from '../services/jikan.ts'
+import { searchAnime } from '../services/anilist.ts'
 import type { Anime } from '../types/anime.ts'
-import type { JikanAnime } from '../types/jikan.ts'
+import type { AniListMedia } from '../types/anilist.ts'
 import { normalizeAnime } from '../utils/normalizeAnime.ts'
 
 export type SearchStatus =
@@ -100,7 +100,7 @@ export function searchReducer(
   }
 }
 
-function normalizePage(items: JikanAnime[], page: number): Anime[] {
+function normalizePage(items: AniListMedia[], page: number): Anime[] {
   return items.map((item, index) => normalizeAnime(item, `${page}-${index}`))
 }
 

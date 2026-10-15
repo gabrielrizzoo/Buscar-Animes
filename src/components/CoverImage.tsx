@@ -1,47 +1,49 @@
 import { useState } from 'react'
+import { Icon } from './Icon.tsx'
 
 interface CoverImageProps {
   src: string | null
+  /** Versão menor da capa, usada quando o card é estreito (lista do celular). */
+  thumbnailSrc?: string | null
   title: string
 }
 
-/** Capa no formato 3:4 com fallback local quando não há imagem ou ela falha ao carregar. */
-export function CoverImage({ src, title }: CoverImageProps) {
+// Larguras das capas do AniList: `large` tem 230 px e `extraLarge`, 460 px.
+const THUMBNAIL_WIDTH = 230
+const LARGE_WIDTH = 460
+
+/** Capa em formato de pôster com fallback local quando não há imagem ou ela falha ao carregar. */
+export function CoverImage({ src, thumbnailSrc, title }: CoverImageProps) {
   const [failed, setFailed] = useState(false)
   const showImage = src !== null && !failed
+  const srcSet =
+    src && thumbnailSrc && thumbnailSrc !== src
+      ? `${thumbnailSrc} ${THUMBNAIL_WIDTH}w, ${src} ${LARGE_WIDTH}w`
+      : undefined
 
   return (
-    <div className="relative aspect-[3/4] w-full shrink-0 overflow-hidden bg-night-deep">
+    <div className="aspect-[5/7] w-full overflow-hidden bg-night-deep">
       {showImage ? (
         <img
           src={src}
+          srcSet={srcSet}
+          sizes={srcSet ? '(min-width: 640px) 290px, 96px' : undefined}
           alt={`Capa de ${title}`}
           loading="lazy"
           decoding="async"
           onError={() => setFailed(true)}
-          className="size-full object-cover object-center transition-transform duration-600 ease-cover motion-safe:group-hover:scale-105"
+          className="size-full object-cover object-center transition-transform duration-500 ease-cover motion-safe:group-hover:scale-105"
         />
       ) : (
         <div
           role="img"
           aria-label={`Capa indisponível para ${title}`}
-          className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center text-accent"
+          className="flex size-full flex-col items-center justify-center gap-2 bg-linear-to-b from-night-soft/60 to-night-deep p-3 text-center text-muted"
         >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-12 opacity-70"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="9" cy="9" r="2" />
-            <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
-          </svg>
-          <span className="text-lg font-medium">Capa indisponível</span>
+          <Icon name="image-off" className="size-7 opacity-70 sm:size-9" />
+          <span className="text-[0.7rem] font-medium sm:text-sm">
+            Capa indisponível
+          </span>
         </div>
       )}
     </div>

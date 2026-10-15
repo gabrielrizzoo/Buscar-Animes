@@ -1,4 +1,5 @@
 import type { SubmitEvent } from 'react'
+import { Icon } from './Icon.tsx'
 
 interface SearchFormProps {
   value: string
@@ -17,28 +18,35 @@ export function SearchForm({
   }
 
   return (
+    // No celular, campo e botão ficam empilhados; a partir de sm, dividem a mesma pílula.
     <form
       role="search"
       onSubmit={handleSubmit}
-      className="flex w-full flex-col gap-4 md:flex-row"
+      className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 sm:rounded-full sm:border sm:border-white/10 sm:bg-night/70 sm:p-1.5 sm:shadow-[0_24px_60px_-24px_rgb(0_0_0/0.9)] sm:backdrop-blur-xl sm:transition-[border-color,box-shadow] sm:duration-200 sm:focus-within:border-accent/60 sm:focus-within:ring-4 sm:focus-within:ring-accent/15"
     >
       <label htmlFor="campo-pesquisa" className="sr-only">
         Digite o título de um anime
       </label>
-      <input
-        id="campo-pesquisa"
-        type="search"
-        required
-        autoComplete="off"
-        enterKeyHint="search"
-        placeholder="Ex: One Piece, Naruto..."
-        value={value}
-        onChange={(event) => onValueChange(event.target.value)}
-        className="min-w-0 flex-1 rounded-full border border-white/5 bg-night-soft/40 px-7 py-[1.2rem] text-[1.05rem] text-ink backdrop-blur-[16px] transition-[background-color,border-color,box-shadow] duration-300 ease-smooth outline-none placeholder:text-muted focus:border-accent/70 focus:bg-night-soft/80 focus:ring-[3px] focus:ring-accent/35"
-      />
+      <div className="relative flex-1">
+        <Icon
+          name="search"
+          className="pointer-events-none absolute top-1/2 left-5 z-10 size-5 -translate-y-1/2 text-muted"
+        />
+        <input
+          id="campo-pesquisa"
+          type="search"
+          required
+          autoComplete="off"
+          enterKeyHint="search"
+          placeholder="Ex: One Piece, Naruto..."
+          value={value}
+          onChange={(event) => onValueChange(event.target.value)}
+          className="w-full rounded-full border border-white/10 bg-night/70 py-4 pr-5 pl-13 text-base text-ink backdrop-blur-xl transition-[border-color,box-shadow] duration-200 outline-none placeholder:text-muted focus:border-accent/60 focus:ring-4 focus:ring-accent/15 sm:border-transparent sm:bg-transparent sm:py-3 sm:backdrop-blur-none sm:focus:border-transparent sm:focus:ring-0"
+        />
+      </div>
       <button
         type="submit"
-        className="rounded-full bg-accent px-10 py-[1.2rem] font-semibold text-night shadow-[0_4px_10px_rgb(0_0_0/0.2)] transition-[background-color,translate,box-shadow] duration-300 ease-smooth hover:bg-accent-strong hover:shadow-[0_6px_15px_rgb(245_158_11/0.3)] active:translate-y-0 motion-safe:hover:-translate-y-0.5 md:py-0"
+        className="rounded-full bg-accent px-7 py-4 font-semibold text-night shadow-[0_10px_30px_-10px_rgb(245_158_11/0.7)] transition-[background-color,translate] duration-200 hover:bg-accent-soft active:translate-y-px sm:py-3"
       >
         Explorar
       </button>

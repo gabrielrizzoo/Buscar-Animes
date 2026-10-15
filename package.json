@@ -2,10 +2,10 @@
   "name": "buscar-animes",
   "private": true,
   "version": "2.0.0",
-  "description": "Busca de animes com dados do MyAnimeList via API Jikan, feita com React, TypeScript e Tailwind CSS.",
+  "description": "Busca de animes com dados do AniList, feita com React, TypeScript e Tailwind CSS.",
   "type": "module",
   "engines": {
-    "node": ">=22.12.0"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "vite",

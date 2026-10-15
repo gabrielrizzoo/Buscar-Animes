@@ -1,19 +1,19 @@
 import { type RefObject, useEffect, useRef } from 'react'
 import type { AnimeSearchState } from '../hooks/useAnimeSearch.ts'
-import { PAGE_SIZE } from '../services/jikan.ts'
+import { PAGE_SIZE } from '../services/anilist.ts'
 import { formatResultSummary } from '../utils/format.ts'
 import { describeSearchError } from '../utils/searchErrors.ts'
 import { AnimeCard } from './AnimeCard.tsx'
 import { AnimeCardSkeleton } from './AnimeCardSkeleton.tsx'
 import { LoadMore } from './LoadMore.tsx'
 import { StatusMessage } from './StatusMessage.tsx'
-import { secondaryButton } from './styles.ts'
+import { resultsGrid, secondaryButton } from './styles.ts'
 
 export const EMPTY_QUERY_MESSAGE =
   'Por favor, digite o nome de uma obra para procurar.'
 
-const gridClass =
-  'grid w-full grid-cols-[repeat(auto-fill,minmax(min(280px,100%),1fr))] gap-10 md:grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))]'
+/** Quantos cards de carregamento aparecem no fim da lista durante o "Carregar mais". */
+const LOAD_MORE_SKELETONS = 4
 
 interface SearchResultsProps {
   state: AnimeSearchState
@@ -91,11 +91,11 @@ function ResultsContent({
       return null
 
     case 'invalid':
-      return <StatusMessage icon="🔍">{EMPTY_QUERY_MESSAGE}</StatusMessage>
+      return <StatusMessage icon="search">{EMPTY_QUERY_MESSAGE}</StatusMessage>
 
     case 'loading':
       return (
-        <div aria-hidden="true" className={gridClass}>
+        <div aria-hidden="true" className={resultsGrid}>
           {Array.from({ length: PAGE_SIZE }, (_, index) => (
             <AnimeCardSkeleton key={index} />
           ))}
@@ -104,7 +104,7 @@ function ResultsContent({
 
     case 'empty':
       return (
-        <StatusMessage icon="👻">
+        <StatusMessage icon="search-x">
           Nenhuma obra encontrada para “
           <b className="font-semibold text-ink">{state.query}</b>”.
         </StatusMessage>
@@ -129,14 +129,16 @@ function ResultsContent({
     case 'success':
       return (
         <>
-          <p className="mb-6 text-sm text-muted">
-            {formatResultSummary(
-              state.results.length,
-              state.total,
-              state.query,
-            )}
-          </p>
-          <ul ref={listRef} className={gridClass}>
+          <div className="mb-6 border-b border-white/8 pb-4">
+            <p className="text-sm text-muted">
+              {formatResultSummary(
+                state.results.length,
+                state.total,
+                state.query,
+              )}
+            </p>
+          </div>
+          <ul ref={listRef} className={resultsGrid}>
             {state.results.map((anime, index) => (
               <li key={anime.id}>
                 {/* O atraso reinicia a cada página para os cards novos não demorarem a aparecer */}
@@ -146,6 +148,12 @@ function ResultsContent({
                 />
               </li>
             ))}
+            {state.loadMoreStatus === 'loading' &&
+              Array.from({ length: LOAD_MORE_SKELETONS }, (_, index) => (
+                <li key={`carregando-${index}`} aria-hidden="true">
+                  <AnimeCardSkeleton />
+                </li>
+              ))}
           </ul>
           {(state.hasNextPage || state.loadMoreStatus === 'error') && (
             <LoadMore

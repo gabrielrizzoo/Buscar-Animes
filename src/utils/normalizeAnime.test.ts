@@ -1,40 +1,100 @@
 import { describe, expect, it } from 'vitest'
-import { makeJikanAnime } from '../test/fixtures.ts'
+import { makeMedia } from '../test/fixtures.ts'
 import { MISSING_TITLE, normalizeAnime } from './normalizeAnime.ts'
 
 describe('normalizeAnime', () => {
-  it('mapeia um item completo da Jikan', () => {
-    expect(normalizeAnime(makeJikanAnime(), '1-0')).toEqual({
+  it('mapeia um item completo do AniList', () => {
+    expect(normalizeAnime(makeMedia(), '1-0')).toEqual({
       id: '20',
-      title: 'Naruto',
-      imageUrl: 'https://cdn.myanimelist.net/images/anime/13/17405l.webp',
-      url: 'https://myanimelist.net/anime/20/Naruto',
+      title: 'NARUTO',
+      imageUrl:
+        'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20.jpg',
+      thumbnailUrl:
+        'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20.jpg',
+      url: 'https://myanimelist.net/anime/20',
+      linkSite: 'MyAnimeList',
       type: 'TV',
       year: 2002,
-      score: 8.01,
-      synopsis: 'Naruto Uzumaki quer se tornar Hokage.',
+      score: 8,
+      synopsis: 'Naruto Uzumaki quer se tornar Hokage. (Source: MAL Rewrite)',
     })
   })
 
-  it('não inventa um tipo quando a API não informa', () => {
-    expect(
-      normalizeAnime(makeJikanAnime({ type: null }), '1-0').type,
-    ).toBeNull()
-  })
-
-  it('usa o ano de estreia quando `year` vem vazio', () => {
-    const anime = makeJikanAnime({
-      year: null,
-      aired: { prop: { from: { year: 1998 } } },
-    })
-    expect(normalizeAnime(anime, '1-0').year).toBe(1998)
+  it('converte a nota de 0–100 para 0–10 com uma casa decimal', () => {
+    expect(normalizeAnime(makeMedia({ averageScore: 87 }), '1-0').score).toBe(
+      8.7,
+    )
   })
 
   it('trata nota zero ou ausente como sem nota', () => {
-    expect(normalizeAnime(makeJikanAnime({ score: 0 }), '1-0').score).toBeNull()
     expect(
-      normalizeAnime(makeJikanAnime({ score: null }), '1-0').score,
+      normalizeAnime(makeMedia({ averageScore: 0 }), '1-0').score,
     ).toBeNull()
+    expect(
+      normalizeAnime(makeMedia({ averageScore: null }), '1-0').score,
+    ).toBeNull()
+  })
+
+  it.each([
+    ['MOVIE', 'Filme'],
+    ['TV_SHORT', 'TV curta'],
+    ['SPECIAL', 'Especial'],
+    ['OVA', 'OVA'],
+    ['MUSIC', 'Clipe musical'],
+  ])('traduz o formato %s para "%s"', (format, label) => {
+    expect(normalizeAnime(makeMedia({ format }), '1-0').type).toBe(label)
+  })
+
+  it('não inventa um tipo quando o formato é ausente ou desconhecido', () => {
+    expect(normalizeAnime(makeMedia({ format: null }), '1-0').type).toBeNull()
+    expect(
+      normalizeAnime(makeMedia({ format: 'NOVO_FORMATO' }), '1-0').type,
+    ).toBeNull()
+  })
+
+  it('usa o ano de estreia quando `seasonYear` vem vazio', () => {
+    const anime = makeMedia({ seasonYear: null, startDate: { year: 1998 } })
+    expect(normalizeAnime(anime, '1-0').year).toBe(1998)
+  })
+
+  it('usa o título em inglês quando falta o romanizado', () => {
+    const anime = makeMedia({
+      title: { romaji: null, english: 'Attack on Titan' },
+    })
+    expect(normalizeAnime(anime, '1-0').title).toBe('Attack on Titan')
+  })
+
+  it('leva ao AniList quando não há ID do MyAnimeList', () => {
+    const anime = makeMedia({ idMal: null })
+    expect(normalizeAnime(anime, '1-0')).toMatchObject({
+      url: 'https://anilist.co/anime/20',
+      linkSite: 'AniList',
+    })
+  })
+
+  it('rejeita links desconhecidos e usa uma busca pelo título no AniList', () => {
+    const anime = makeMedia({
+      idMal: null,
+      siteUrl: 'javascript:alert(1)',
+      title: { romaji: 'Cowboy Bebop' },
+    })
+    expect(normalizeAnime(anime, '1-0')).toMatchObject({
+      url: 'https://anilist.co/search/anime?search=Cowboy%20Bebop',
+      linkSite: 'AniList',
+    })
+  })
+
+  it('aceita só capas https', () => {
+    const anime = makeMedia({
+      coverImage: {
+        extraLarge: 'javascript:alert(1)',
+        large: 'https://s4.anilist.co/capa-media.jpg',
+      },
+    })
+    expect(normalizeAnime(anime, '1-0')).toMatchObject({
+      imageUrl: 'https://s4.anilist.co/capa-media.jpg',
+      thumbnailUrl: 'https://s4.anilist.co/capa-media.jpg',
+    })
   })
 
   it('preenche valores padrão quando quase tudo está ausente', () => {
@@ -42,7 +102,9 @@ describe('normalizeAnime', () => {
       id: 'sem-id-2-5',
       title: MISSING_TITLE,
       imageUrl: null,
-      url: 'https://myanimelist.net/',
+      thumbnailUrl: null,
+      url: 'https://anilist.co/',
+      linkSite: 'AniList',
       type: null,
       year: null,
       score: null,
@@ -50,33 +112,10 @@ describe('normalizeAnime', () => {
     })
   })
 
-  it('escolhe a próxima capa quando a preferida não é https', () => {
-    const anime = makeJikanAnime({
-      images: {
-        webp: { large_image_url: 'http://cdn.myanimelist.net/inseguro.webp' },
-        jpg: {
-          large_image_url: 'javascript:alert(1)',
-          image_url: 'https://cdn.myanimelist.net/a.jpg',
-        },
-      },
-    })
-    expect(normalizeAnime(anime, '1-0').imageUrl).toBe(
-      'https://cdn.myanimelist.net/a.jpg',
-    )
-  })
-
-  it('rejeita links que não sejam do MyAnimeList e usa uma busca pelo título', () => {
-    const anime = makeJikanAnime({
-      url: 'javascript:alert(1)',
-      title: 'Cowboy Bebop',
-    })
-    expect(normalizeAnime(anime, '1-0').url).toBe(
-      'https://myanimelist.net/anime.php?q=Cowboy%20Bebop',
-    )
-  })
-
-  it('mantém textos com HTML como texto puro (o React os escapa ao renderizar)', () => {
+  it('mantém textos com HTML no título como texto puro (o React os escapa ao renderizar)', () => {
     const title = '<img src=x onerror="alert(1)">'
-    expect(normalizeAnime(makeJikanAnime({ title }), '1-0').title).toBe(title)
+    expect(
+      normalizeAnime(makeMedia({ title: { romaji: title } }), '1-0').title,
+    ).toBe(title)
   })
 })

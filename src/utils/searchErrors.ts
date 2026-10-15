@@ -1,11 +1,12 @@
+import type { IconName } from '../components/Icon.tsx'
 import {
-  JikanHttpError,
-  JikanResponseError,
+  ApiHttpError,
+  ApiResponseError,
   RequestTimeoutError,
-} from '../services/jikan.ts'
+} from '../services/anilist.ts'
 
 export interface ErrorFeedback {
-  icon: string
+  icon: IconName
   message: string
 }
 
@@ -13,37 +14,39 @@ export interface ErrorFeedback {
 export function describeSearchError(error: unknown): ErrorFeedback {
   if (error instanceof RequestTimeoutError) {
     return {
-      icon: '⏱️',
+      icon: 'clock',
       message:
         'A API demorou demais para responder. Tente novamente em instantes.',
     }
   }
 
-  if (error instanceof JikanHttpError) {
+  if (error instanceof ApiHttpError) {
     if (error.status === 429) {
+      const wait = error.retryAfterSeconds
+        ? `cerca de ${error.retryAfterSeconds} segundos`
+        : 'alguns segundos'
       return {
-        icon: '⏳',
-        message:
-          'Muitas requisições. O banco de dados do MyAnimeList pede para você esperar alguns segundos e tentar novamente.',
+        icon: 'clock',
+        message: `Muitas buscas em pouco tempo. Aguarde ${wait} e tente novamente.`,
       }
     }
     if (error.status >= 500) {
       return {
-        icon: '🛠️',
+        icon: 'server',
         message:
-          'O serviço da Jikan (MyAnimeList) está instável no momento. Tente novamente mais tarde.',
+          'O serviço do AniList está instável no momento. Tente novamente mais tarde.',
       }
     }
     return {
-      icon: '⚠️',
+      icon: 'alert',
       message:
         'Não foi possível realizar essa busca. Revise o termo e tente novamente.',
     }
   }
 
-  if (error instanceof JikanResponseError) {
+  if (error instanceof ApiResponseError) {
     return {
-      icon: '⚠️',
+      icon: 'alert',
       message:
         'A API retornou uma resposta inesperada. Tente novamente mais tarde.',
     }
@@ -52,13 +55,13 @@ export function describeSearchError(error: unknown): ErrorFeedback {
   // fetch rejeita com TypeError quando não consegue se conectar ao servidor.
   if (error instanceof TypeError) {
     return {
-      icon: '📡',
+      icon: 'wifi-off',
       message: 'Problema de conexão. Verifique sua internet e tente novamente.',
     }
   }
 
   return {
-    icon: '⚠️',
+    icon: 'alert',
     message: 'Algo deu errado ao buscar os animes. Tente novamente.',
   }
 }
