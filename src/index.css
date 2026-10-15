@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Identidade visual da versão original (styles.css) convertida em tokens do Tailwind */
+/* Identidade visual da versão original (tag v1-vanilla) convertida em tokens do Tailwind */
 @theme {
   --color-night-deep: #0b0f19;
   --color-night: #0f172a;
