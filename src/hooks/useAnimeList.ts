@@ -1,71 +1,71 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import { searchAnime } from '../services/anilist.ts'
-import type { Anime } from '../types/anime.ts'
+import type { MediaPage } from '../services/anilist.ts'
 import type { AniListMedia } from '../types/anilist.ts'
+import type { Anime } from '../types/anime.ts'
 import { normalizeAnime } from '../utils/normalizeAnime.ts'
 
-export type SearchStatus =
+export type ListStatus =
   'idle' | 'invalid' | 'loading' | 'success' | 'empty' | 'error'
 
 export type LoadMoreStatus = 'idle' | 'loading' | 'error'
 
-export interface AnimeSearchState {
-  status: SearchStatus
-  query: string
+/** Busca uma página da lista identificada por `key` (termo buscado ou ID da lista). */
+export type PageFetcher<Key extends string> = (
+  key: Key,
+  page: number,
+  signal: AbortSignal,
+) => Promise<MediaPage>
+
+export interface AnimeListState<Key extends string = string> {
+  status: ListStatus
+  /** Termo buscado ou ID da lista de sugestões; vazio antes da primeira carga. */
+  query: Key | ''
   results: Anime[]
   page: number
   hasNextPage: boolean
-  total: number | null
   error: unknown
   loadMoreStatus: LoadMoreStatus
   loadMoreError: unknown
 }
 
-type SearchAction =
+type ListAction<Key extends string> =
   | { type: 'reset' }
   | { type: 'invalid' }
-  | { type: 'search/start'; query: string }
-  | {
-      type: 'search/success'
-      results: Anime[]
-      hasNextPage: boolean
-      total: number | null
-    }
-  | { type: 'search/error'; error: unknown }
+  | { type: 'load/start'; query: Key }
+  | { type: 'load/success'; results: Anime[]; hasNextPage: boolean }
+  | { type: 'load/error'; error: unknown }
   | { type: 'more/start' }
   | {
       type: 'more/success'
       results: Anime[]
       page: number
       hasNextPage: boolean
-      total: number | null
     }
   | { type: 'more/error'; error: unknown }
 
-export const initialSearchState: AnimeSearchState = {
+export const initialListState: AnimeListState<never> = {
   status: 'idle',
   query: '',
   results: [],
   page: 0,
   hasNextPage: false,
-  total: null,
   error: null,
   loadMoreStatus: 'idle',
   loadMoreError: null,
 }
 
-export function searchReducer(
-  state: AnimeSearchState,
-  action: SearchAction,
-): AnimeSearchState {
+export function listReducer<Key extends string>(
+  state: AnimeListState<Key>,
+  action: ListAction<Key>,
+): AnimeListState<Key> {
   switch (action.type) {
     case 'reset':
-      return initialSearchState
+      return initialListState
     case 'invalid':
-      return { ...initialSearchState, status: 'invalid' }
-    case 'search/start':
-      return { ...initialSearchState, status: 'loading', query: action.query }
-    case 'search/success': {
+      return { ...initialListState, status: 'invalid' }
+    case 'load/start':
+      return { ...initialListState, status: 'loading', query: action.query }
+    case 'load/success': {
       const found = action.results.length > 0
       return {
         ...state,
@@ -73,10 +73,9 @@ export function searchReducer(
         results: action.results,
         page: 1,
         hasNextPage: found && action.hasNextPage,
-        total: action.total,
       }
     }
-    case 'search/error':
+    case 'load/error':
       return { ...state, status: 'error', error: action.error }
     case 'more/start':
       return { ...state, loadMoreStatus: 'loading', loadMoreError: null }
@@ -91,7 +90,6 @@ export function searchReducer(
         results: [...state.results, ...newResults],
         page: action.page,
         hasNextPage: action.hasNextPage,
-        total: action.total ?? state.total,
         loadMoreStatus: 'idle',
       }
     }
@@ -105,12 +103,15 @@ function normalizePage(items: AniListMedia[], page: number): Anime[] {
 }
 
 /**
- * Estado e ações da busca de animes.
- * Só existe uma requisição ativa por vez: buscar de novo, carregar mais ou
- * desmontar o componente cancela a anterior, e respostas antigas são ignoradas.
+ * Estado e ações de uma lista paginada de animes: a busca por título ou uma
+ * lista de sugestões. Só existe uma requisição ativa por vez: carregar outra
+ * lista, carregar mais ou desmontar o componente cancela a anterior, e
+ * respostas antigas são ignoradas.
+ *
+ * `fetchPage` deve ser estável (definido fora do componente).
  */
-export function useAnimeSearch() {
-  const [state, dispatch] = useReducer(searchReducer, initialSearchState)
+export function useAnimeList<Key extends string>(fetchPage: PageFetcher<Key>) {
+  const [state, dispatch] = useReducer(listReducer<Key>, initialListState)
   const controllerRef = useRef<AbortController | null>(null)
 
   const cancelRequest = useCallback(() => {
@@ -127,46 +128,45 @@ export function useAnimeSearch() {
 
   useEffect(() => cancelRequest, [cancelRequest])
 
-  const search = useCallback(
-    async (rawQuery: string) => {
-      const query = rawQuery.trim()
-      if (!query) {
+  const load = useCallback(
+    async (key: Key) => {
+      if (key.trim() === '') {
         cancelRequest()
         dispatch({ type: 'invalid' })
         return
       }
 
       const controller = startRequest()
-      dispatch({ type: 'search/start', query })
+      dispatch({ type: 'load/start', query: key })
 
       try {
-        const result = await searchAnime({
-          query,
-          page: 1,
-          signal: controller.signal,
-        })
+        const result = await fetchPage(key, 1, controller.signal)
         if (controllerRef.current !== controller) return
         dispatch({
-          type: 'search/success',
+          type: 'load/success',
           results: normalizePage(result.items, 1),
           hasNextPage: result.hasNextPage,
-          total: result.total,
         })
       } catch (error) {
         // Requisição substituída ou cancelada: quem a substituiu já cuida da tela.
         if (controllerRef.current !== controller) return
-        dispatch({ type: 'search/error', error })
+        dispatch({ type: 'load/error', error })
       } finally {
         if (controllerRef.current === controller) controllerRef.current = null
       }
     },
-    [cancelRequest, startRequest],
+    [fetchPage, cancelRequest, startRequest],
   )
 
   const { status, hasNextPage, loadMoreStatus, page, query } = state
 
   const loadMore = useCallback(async () => {
-    if (status !== 'success' || !hasNextPage || loadMoreStatus === 'loading')
+    if (
+      query === '' ||
+      status !== 'success' ||
+      !hasNextPage ||
+      loadMoreStatus === 'loading'
+    )
       return
 
     const nextPage = page + 1
@@ -174,18 +174,13 @@ export function useAnimeSearch() {
     dispatch({ type: 'more/start' })
 
     try {
-      const result = await searchAnime({
-        query,
-        page: nextPage,
-        signal: controller.signal,
-      })
+      const result = await fetchPage(query, nextPage, controller.signal)
       if (controllerRef.current !== controller) return
       dispatch({
         type: 'more/success',
         results: normalizePage(result.items, nextPage),
         page: nextPage,
         hasNextPage: result.hasNextPage,
-        total: result.total,
       })
     } catch (error) {
       if (controllerRef.current !== controller) return
@@ -193,17 +188,25 @@ export function useAnimeSearch() {
     } finally {
       if (controllerRef.current === controller) controllerRef.current = null
     }
-  }, [status, hasNextPage, loadMoreStatus, page, query, startRequest])
+  }, [
+    fetchPage,
+    status,
+    hasNextPage,
+    loadMoreStatus,
+    page,
+    query,
+    startRequest,
+  ])
 
   const retry = useCallback(() => {
-    if (status === 'error') void search(query)
+    if (status === 'error' && query !== '') void load(query)
     else if (loadMoreStatus === 'error') void loadMore()
-  }, [status, loadMoreStatus, query, search, loadMore])
+  }, [status, loadMoreStatus, query, load, loadMore])
 
   const reset = useCallback(() => {
     cancelRequest()
     dispatch({ type: 'reset' })
   }, [cancelRequest])
 
-  return { state, search, loadMore, retry, reset }
+  return { state, load, loadMore, retry, reset }
 }

@@ -10,8 +10,8 @@ const linkClass =
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/8 bg-night-deep/60">
-      <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-2 px-6 py-8 text-center text-sm text-muted sm:flex-row sm:text-left">
+    <footer className="border-t border-white/[0.06]">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-8 text-center text-sm text-faint sm:flex-row sm:text-left">
         <p>© {YEARS} Buscar Animes. Todos os direitos reservados.</p>
         <p>
           Dados fornecidos pelo{' '}

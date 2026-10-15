@@ -1,23 +1,24 @@
 @import 'tailwindcss';
 
-/* Paleta noturna com destaque âmbar, herdada da versão original e ampliada no redesign */
+/* Tema escuro neutro: as capas dão a cor, e o âmbar fica para ações e destaques */
 @theme {
-  --color-night-deep: #0b0f19;
-  --color-night: #0f172a;
-  --color-night-soft: #1e293b;
-  --color-ink: #f8fafc;
-  --color-muted: #94a3b8;
+  --color-canvas: #07090e;
+  --color-surface: #0e1118;
+  --color-raised: #161a24;
+  --color-ink: #f4f5f7;
+  --color-muted: #9ba3b4;
+  --color-faint: #687083;
   --color-accent: #f59e0b;
-  --color-accent-strong: #d97706;
   --color-accent-soft: #fcd34d;
+  --color-accent-strong: #f97316;
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Chakra Petch', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Sora', 'Inter', ui-sans-serif, system-ui, sans-serif;
 
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-cover: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-  --animate-fade-in: fade-in 0.5s ease both;
+  --animate-fade-in: fade-in 0.4s ease both;
   --animate-rise-in: rise-in 0.5s var(--ease-smooth) both;
   --animate-shimmer: shimmer 1.5s linear infinite;
 
@@ -50,7 +51,11 @@
   }
 
   body {
-    @apply bg-night-deep font-sans text-ink antialiased;
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent/30 text-ink;
   }
 
   /* Indicador de foco visível e consistente para links e botões navegados pelo teclado */
@@ -71,43 +76,39 @@
   }
 }
 
-/* Brilhos suaves no fundo da página (só gradientes, sem filtros caros de blur) */
-@utility bg-aurora {
+/* Brilho suave atrás do título (só gradientes, sem filtros caros de blur) */
+@utility bg-glow {
   background-image:
     radial-gradient(
-      60rem 32rem at 50% -8rem,
-      rgb(245 158 11 / 0.14),
+      44rem 22rem at 50% -6rem,
+      rgb(245 158 11 / 0.16),
       transparent 70%
     ),
     radial-gradient(
-      42rem 30rem at -10% 10%,
-      rgb(99 102 241 / 0.12),
+      36rem 24rem at 12% 0%,
+      rgb(124 58 237 / 0.1),
       transparent 70%
     ),
     radial-gradient(
-      40rem 28rem at 110% 18%,
-      rgb(236 72 153 / 0.07),
+      34rem 24rem at 88% 4%,
+      rgb(14 165 233 / 0.08),
       transparent 70%
     );
 }
 
-/* Malha de pontos que some em direção às bordas */
-@utility bg-dots {
-  background-image: radial-gradient(
-    rgb(255 255 255 / 0.07) 1px,
-    transparent 1px
-  );
-  background-size: 22px 22px;
-  mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, black, transparent);
+/* Sombra colorida com a cor predominante da capa (--cover-color), ou âmbar */
+@utility shadow-cover {
+  box-shadow: 0 22px 44px -18px
+    color-mix(in srgb, var(--cover-color, var(--color-accent)) 65%, transparent);
 }
 
 /* Placeholder com brilho animado usado nos cards de carregamento */
 @utility skeleton {
   background-image: linear-gradient(
     90deg,
-    rgb(30 41 59 / 0.55) 25%,
-    rgb(51 65 85 / 0.75) 50%,
-    rgb(30 41 59 / 0.55) 75%
+    rgb(255 255 255 / 0.04) 25%,
+    rgb(255 255 255 / 0.09) 50%,
+    rgb(255 255 255 / 0.04) 75%
   );
   background-size: 200% 100%;
   animation: var(--animate-shimmer);

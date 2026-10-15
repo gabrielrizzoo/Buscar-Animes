@@ -13,6 +13,8 @@ export type AniListMediaFormat =
   | 'MUSIC'
   | (string & {})
 
+export type AniListSeason = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL'
+
 export interface AniListMedia {
   id?: number | null
   idMal?: number | null
@@ -24,6 +26,9 @@ export interface AniListMedia {
   format?: AniListMediaFormat | null
   seasonYear?: number | null
   startDate?: { year?: number | null } | null
+  episodes?: number | null
+  /** Gêneros em inglês, como "Action" e "Slice of Life". */
+  genres?: (string | null)[] | null
   /** Nota média de 0 a 100. */
   averageScore?: number | null
   /** Sinopse que pode conter tags HTML simples, como `<br>` e `<i>`. */
@@ -31,10 +36,14 @@ export interface AniListMedia {
   coverImage?: {
     extraLarge?: string | null
     large?: string | null
+    /** Cor predominante da capa, em hexadecimal (#rrggbb). */
+    color?: string | null
   } | null
+  /** Imagem horizontal de destaque; só é pedida na consulta do sorteio. */
+  bannerImage?: string | null
 }
 
-export interface AniListSearchResponse {
+export interface AniListPageResponse {
   data: {
     Page: {
       pageInfo?: { hasNextPage?: boolean | null } | null

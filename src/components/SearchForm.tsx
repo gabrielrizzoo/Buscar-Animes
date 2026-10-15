@@ -1,16 +1,18 @@
-import type { SubmitEvent } from 'react'
+import type { Ref, SubmitEvent } from 'react'
 import { Icon } from './Icon.tsx'
 
 interface SearchFormProps {
   value: string
   onValueChange: (value: string) => void
   onSearch: (query: string) => void
+  inputRef?: Ref<HTMLInputElement>
 }
 
 export function SearchForm({
   value,
   onValueChange,
   onSearch,
+  inputRef,
 }: SearchFormProps) {
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -18,37 +20,36 @@ export function SearchForm({
   }
 
   return (
-    // No celular, campo e botão ficam empilhados; a partir de sm, dividem a mesma pílula.
+    // O contorno de foco fica na barra inteira, que envolve o campo e o botão.
     <form
       role="search"
       onSubmit={handleSubmit}
-      className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 sm:rounded-full sm:border sm:border-white/10 sm:bg-night/70 sm:p-1.5 sm:shadow-[0_24px_60px_-24px_rgb(0_0_0/0.9)] sm:backdrop-blur-xl sm:transition-[border-color,box-shadow] sm:duration-200 sm:focus-within:border-accent/60 sm:focus-within:ring-4 sm:focus-within:ring-accent/15"
+      className="group/search flex items-center gap-2 rounded-2xl border border-white/10 bg-surface/80 p-1.5 pl-4 shadow-[0_24px_60px_-28px_rgb(0_0_0/0.9)] backdrop-blur-xl transition-[border-color,box-shadow] duration-200 focus-within:border-accent/50 focus-within:ring-4 focus-within:ring-accent/10"
     >
       <label htmlFor="campo-pesquisa" className="sr-only">
         Digite o título de um anime
       </label>
-      <div className="relative flex-1">
-        <Icon
-          name="search"
-          className="pointer-events-none absolute top-1/2 left-5 z-10 size-5 -translate-y-1/2 text-muted"
-        />
-        <input
-          id="campo-pesquisa"
-          type="search"
-          required
-          autoComplete="off"
-          enterKeyHint="search"
-          placeholder="Ex: One Piece, Naruto..."
-          value={value}
-          onChange={(event) => onValueChange(event.target.value)}
-          className="w-full rounded-full border border-white/10 bg-night/70 py-4 pr-5 pl-13 text-base text-ink backdrop-blur-xl transition-[border-color,box-shadow] duration-200 outline-none placeholder:text-muted focus:border-accent/60 focus:ring-4 focus:ring-accent/15 sm:border-transparent sm:bg-transparent sm:py-3 sm:backdrop-blur-none sm:focus:border-transparent sm:focus:ring-0"
-        />
-      </div>
+      <Icon
+        name="search"
+        className="size-5 shrink-0 text-faint transition-colors duration-200 group-focus-within/search:text-accent"
+      />
+      <input
+        ref={inputRef}
+        id="campo-pesquisa"
+        type="search"
+        required
+        autoComplete="off"
+        enterKeyHint="search"
+        placeholder="Ex: Frieren, One Piece..."
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+        className="min-w-0 flex-1 bg-transparent py-2.5 text-base text-ink outline-none placeholder:text-faint"
+      />
       <button
         type="submit"
-        className="rounded-full bg-accent px-7 py-4 font-semibold text-night shadow-[0_10px_30px_-10px_rgb(245_158_11/0.7)] transition-[background-color,translate] duration-200 hover:bg-accent-soft active:translate-y-px sm:py-3"
+        className="shrink-0 rounded-xl bg-accent px-4 py-2.5 font-semibold text-canvas transition-[background-color,translate] duration-200 hover:bg-accent-soft active:translate-y-px sm:px-6"
       >
-        Explorar
+        Buscar
       </button>
     </form>
   )

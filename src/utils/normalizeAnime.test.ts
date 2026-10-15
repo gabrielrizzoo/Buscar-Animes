@@ -4,17 +4,27 @@ import { MISSING_TITLE, normalizeAnime } from './normalizeAnime.ts'
 
 describe('normalizeAnime', () => {
   it('mapeia um item completo do AniList', () => {
-    expect(normalizeAnime(makeMedia(), '1-0')).toEqual({
+    expect(
+      normalizeAnime(
+        makeMedia({ bannerImage: 'https://s4.anilist.co/banner.jpg' }),
+        '1-0',
+      ),
+    ).toEqual({
       id: '20',
       title: 'NARUTO',
+      englishTitle: null,
       imageUrl:
         'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20.jpg',
       thumbnailUrl:
         'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20.jpg',
+      bannerUrl: 'https://s4.anilist.co/banner.jpg',
+      color: '#e4a15d',
       url: 'https://myanimelist.net/anime/20',
       linkSite: 'MyAnimeList',
       type: 'TV',
       year: 2002,
+      episodes: 220,
+      genres: ['Ação', 'Aventura', 'Comédia'],
       score: 8,
       synopsis: 'Naruto Uzumaki quer se tornar Hokage. (Source: MAL Rewrite)',
     })
@@ -64,6 +74,45 @@ describe('normalizeAnime', () => {
     expect(normalizeAnime(anime, '1-0').title).toBe('Attack on Titan')
   })
 
+  it('guarda o título em inglês só quando ele é diferente do principal', () => {
+    const different = makeMedia({
+      title: { romaji: 'Shingeki no Kyojin', english: 'Attack on Titan' },
+    })
+    expect(normalizeAnime(different, '1-0')).toMatchObject({
+      title: 'Shingeki no Kyojin',
+      englishTitle: 'Attack on Titan',
+    })
+    expect(normalizeAnime(makeMedia(), '1-0').englishTitle).toBeNull()
+  })
+
+  it('traduz os gêneros conhecidos e mantém os demais', () => {
+    const anime = makeMedia({
+      genres: ['Slice of Life', 'Sci-Fi', 'Mecha', null, ' '],
+    })
+    expect(normalizeAnime(anime, '1-0').genres).toEqual([
+      'Cotidiano',
+      'Ficção científica',
+      'Mecha',
+    ])
+  })
+
+  it('aceita só cores no formato #rrggbb', () => {
+    const color = (value: string) =>
+      normalizeAnime(makeMedia({ coverImage: { color: value } }), '1-0').color
+
+    expect(color('#43E4A1')).toBe('#43E4A1')
+    expect(color('red; background: url(x)')).toBeNull()
+    expect(color('#fff')).toBeNull()
+  })
+
+  it('ignora banners que não são https e episódios inválidos', () => {
+    const anime = makeMedia({ bannerImage: 'http://x.jpg', episodes: 0 })
+    expect(normalizeAnime(anime, '1-0')).toMatchObject({
+      bannerUrl: null,
+      episodes: null,
+    })
+  })
+
   it('leva ao AniList quando não há ID do MyAnimeList', () => {
     const anime = makeMedia({ idMal: null })
     expect(normalizeAnime(anime, '1-0')).toMatchObject({
@@ -101,12 +150,17 @@ describe('normalizeAnime', () => {
     expect(normalizeAnime({}, '2-5')).toEqual({
       id: 'sem-id-2-5',
       title: MISSING_TITLE,
+      englishTitle: null,
       imageUrl: null,
       thumbnailUrl: null,
+      bannerUrl: null,
+      color: null,
       url: 'https://anilist.co/',
       linkSite: 'AniList',
       type: null,
       year: null,
+      episodes: null,
+      genres: [],
       score: null,
       synopsis: null,
     })

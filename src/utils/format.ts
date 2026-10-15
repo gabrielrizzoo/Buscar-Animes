@@ -3,14 +3,12 @@ export function formatScore(score: number): string {
   return score.toFixed(1)
 }
 
-/** Resumo da quantidade de resultados, ex.: "Exibindo 12 de 87 resultados para “naruto”". */
-export function formatResultSummary(
-  shown: number,
-  total: number | null,
-  query: string,
-): string {
-  if (total !== null && total > shown) {
-    return `Exibindo ${shown} de ${total} resultados para “${query}”`
-  }
+/** Resumo da quantidade de resultados, ex.: "12 resultados para “naruto”". */
+export function formatResultSummary(shown: number, query: string): string {
   return `${shown} ${shown === 1 ? 'resultado' : 'resultados'} para “${query}”`
+}
+
+/** Quantidade de episódios por extenso, ex.: "1 episódio", "24 episódios". */
+export function formatEpisodes(episodes: number): string {
+  return `${episodes} ${episodes === 1 ? 'episódio' : 'episódios'}`
 }
