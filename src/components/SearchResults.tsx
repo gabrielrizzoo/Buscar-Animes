@@ -1,81 +1,63 @@
-import { type RefObject, useEffect, useRef } from 'react'
-import type { AnimeSearchState } from '../hooks/useAnimeSearch.ts'
-import { PAGE_SIZE } from '../services/anilist.ts'
+import type { AnimeListState } from '../hooks/useAnimeList.ts'
 import { formatResultSummary } from '../utils/format.ts'
 import { describeSearchError } from '../utils/searchErrors.ts'
-import { AnimeCard } from './AnimeCard.tsx'
-import { AnimeCardSkeleton } from './AnimeCardSkeleton.tsx'
-import { LoadMore } from './LoadMore.tsx'
+import { GridSkeleton } from './AnimeCardSkeleton.tsx'
+import { AnimeGrid } from './AnimeGrid.tsx'
+import { Icon } from './Icon.tsx'
 import { StatusMessage } from './StatusMessage.tsx'
-import { resultsGrid, secondaryButton } from './styles.ts'
+import { secondaryButton, sectionTitle } from './styles.ts'
 
 export const EMPTY_QUERY_MESSAGE =
   'Por favor, digite o nome de uma obra para procurar.'
 
-/** Quantos cards de carregamento aparecem no fim da lista durante o "Carregar mais". */
-const LOAD_MORE_SKELETONS = 4
-
 interface SearchResultsProps {
-  state: AnimeSearchState
+  state: AnimeListState
   onRetry: () => void
   onLoadMore: () => void
-}
-
-interface ResultsContentProps extends SearchResultsProps {
-  listRef: RefObject<HTMLUListElement | null>
+  /** Limpa a busca e volta para as sugestões. */
+  onClear: () => void
 }
 
 export function SearchResults({
   state,
   onRetry,
   onLoadMore,
+  onClear,
 }: SearchResultsProps) {
   const busy = state.status === 'loading' || state.loadMoreStatus === 'loading'
-  const listRef = useRef<HTMLUListElement>(null)
-  // Posição do primeiro card da próxima página, que recebe o foco quando ela chega.
-  const firstNewIndexRef = useRef<number | null>(null)
-
-  function handleLoadMore() {
-    firstNewIndexRef.current = state.results.length
-    onLoadMore()
-  }
-
-  function handleRetry() {
-    if (state.loadMoreStatus === 'error') {
-      firstNewIndexRef.current = state.results.length
-    }
-    onRetry()
-  }
-
-  // Sem isso, o foco do teclado se perderia quando o botão "Carregar mais" some na última página.
-  useEffect(() => {
-    const index = firstNewIndexRef.current
-    if (index === null || state.loadMoreStatus === 'loading') return
-    firstNewIndexRef.current = null
-    if (state.loadMoreStatus === 'idle') {
-      listRef.current?.querySelectorAll('a')[index]?.focus()
-    }
-  }, [state.loadMoreStatus, state.results.length])
 
   return (
     <section
       aria-labelledby="titulo-resultados"
       aria-busy={busy}
-      className="w-full"
+      className="w-full motion-safe:animate-fade-in"
     >
-      <h2 id="titulo-resultados" className="sr-only">
-        Resultados da busca
-      </h2>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-white/[0.07] pb-5">
+        <div className="min-w-0">
+          <h2 id="titulo-resultados" className={sectionTitle}>
+            Resultados da busca
+          </h2>
+          {state.status === 'success' && (
+            <p className="mt-1 text-sm break-words text-muted">
+              {formatResultSummary(state.results.length, state.query)}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onClear}
+          className={`${secondaryButton} px-4 py-2`}
+        >
+          <Icon name="x" className="size-4" />
+          Limpar busca
+        </button>
+      </div>
+
       {/* Região sempre presente para leitores de tela anunciarem cada mudança de estado */}
       <p role="status" className="sr-only">
         {announcement(state)}
       </p>
-      <ResultsContent
-        state={state}
-        onRetry={handleRetry}
-        onLoadMore={handleLoadMore}
-        listRef={listRef}
-      />
+      <ResultsContent state={state} onRetry={onRetry} onLoadMore={onLoadMore} />
     </section>
   )
 }
@@ -84,8 +66,7 @@ function ResultsContent({
   state,
   onRetry,
   onLoadMore,
-  listRef,
-}: ResultsContentProps) {
+}: Omit<SearchResultsProps, 'onClear'>) {
   switch (state.status) {
     case 'idle':
       return null
@@ -94,13 +75,7 @@ function ResultsContent({
       return <StatusMessage icon="search">{EMPTY_QUERY_MESSAGE}</StatusMessage>
 
     case 'loading':
-      return (
-        <div aria-hidden="true" className={resultsGrid}>
-          {Array.from({ length: PAGE_SIZE }, (_, index) => (
-            <AnimeCardSkeleton key={index} />
-          ))}
-        </div>
-      )
+      return <GridSkeleton />
 
     case 'empty':
       return (
@@ -128,47 +103,12 @@ function ResultsContent({
 
     case 'success':
       return (
-        <>
-          <div className="mb-6 border-b border-white/8 pb-4">
-            <p className="text-sm text-muted">
-              {formatResultSummary(
-                state.results.length,
-                state.total,
-                state.query,
-              )}
-            </p>
-          </div>
-          <ul ref={listRef} className={resultsGrid}>
-            {state.results.map((anime, index) => (
-              <li key={anime.id}>
-                {/* O atraso reinicia a cada página para os cards novos não demorarem a aparecer */}
-                <AnimeCard
-                  anime={anime}
-                  animationDelay={(index % PAGE_SIZE) * 0.05}
-                />
-              </li>
-            ))}
-            {state.loadMoreStatus === 'loading' &&
-              Array.from({ length: LOAD_MORE_SKELETONS }, (_, index) => (
-                <li key={`carregando-${index}`} aria-hidden="true">
-                  <AnimeCardSkeleton />
-                </li>
-              ))}
-          </ul>
-          {(state.hasNextPage || state.loadMoreStatus === 'error') && (
-            <LoadMore
-              status={state.loadMoreStatus}
-              error={state.loadMoreError}
-              onLoadMore={onLoadMore}
-              onRetry={onRetry}
-            />
-          )}
-        </>
+        <AnimeGrid state={state} onLoadMore={onLoadMore} onRetry={onRetry} />
       )
   }
 }
 
-function announcement(state: AnimeSearchState): string {
+function announcement(state: AnimeListState): string {
   switch (state.status) {
     case 'idle':
       return ''
@@ -185,6 +125,6 @@ function announcement(state: AnimeSearchState): string {
         return 'Carregando mais resultados…'
       if (state.loadMoreStatus === 'error')
         return describeSearchError(state.loadMoreError).message
-      return `${formatResultSummary(state.results.length, state.total, state.query)}.`
+      return `${formatResultSummary(state.results.length, state.query)}.`
   }
 }

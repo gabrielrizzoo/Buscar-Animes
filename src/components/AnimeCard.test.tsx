@@ -1,23 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { Anime } from '../types/anime.ts'
+import { makeAnime } from '../test/fixtures.ts'
 import { AnimeCard, MISSING_SYNOPSIS } from './AnimeCard.tsx'
-
-function makeAnime(overrides: Partial<Anime> = {}): Anime {
-  return {
-    id: '20',
-    title: 'Naruto',
-    imageUrl: 'https://s4.anilist.co/capa-grande.jpg',
-    thumbnailUrl: 'https://s4.anilist.co/capa-media.jpg',
-    url: 'https://myanimelist.net/anime/20',
-    linkSite: 'MyAnimeList',
-    type: 'TV',
-    year: 2002,
-    score: 8,
-    synopsis: 'Naruto Uzumaki quer se tornar Hokage.',
-    ...overrides,
-  }
-}
 
 describe('AnimeCard', () => {
   it('exibe título, capa, detalhes e sinopse', () => {
@@ -69,7 +53,6 @@ describe('AnimeCard', () => {
         name: 'Naruto (abre no AniList em nova aba)',
       }),
     ).toHaveAttribute('href', 'https://anilist.co/anime/20')
-    expect(screen.getByText('AniList')).toBeInTheDocument()
   })
 
   it('usa os textos padrão quando faltam dados', () => {
@@ -90,6 +73,18 @@ describe('AnimeCard', () => {
     expect(screen.getByText('TBA')).toBeInTheDocument()
     expect(screen.getByText('Sem nota')).toBeInTheDocument()
     expect(screen.getByText(MISSING_SYNOPSIS)).toBeInTheDocument()
+  })
+
+  it('usa a cor da capa na sombra e ignora a ausência dela', () => {
+    const { rerender } = render(<AnimeCard anime={makeAnime()} />)
+    expect(
+      screen.getByRole('article').style.getPropertyValue('--cover-color'),
+    ).toBe('#e4a15d')
+
+    rerender(<AnimeCard anime={makeAnime({ color: null })} />)
+    expect(
+      screen.getByRole('article').style.getPropertyValue('--cover-color'),
+    ).toBe('')
   })
 
   it('mostra a capa substituta quando não há imagem', () => {

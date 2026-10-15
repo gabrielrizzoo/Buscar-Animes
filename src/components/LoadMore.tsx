@@ -1,4 +1,4 @@
-import type { LoadMoreStatus } from '../hooks/useAnimeSearch.ts'
+import type { LoadMoreStatus } from '../hooks/useAnimeList.ts'
 import { describeSearchError } from '../utils/searchErrors.ts'
 import { secondaryButton } from './styles.ts'
 
@@ -17,7 +17,7 @@ export function LoadMore({
 }: LoadMoreProps) {
   if (status === 'error') {
     return (
-      <div className="mt-10 flex flex-col items-center gap-4 text-center text-sm text-muted">
+      <div className="mt-12 flex flex-col items-center gap-4 text-center text-sm text-muted">
         <p>{describeSearchError(error).message}</p>
         <button type="button" className={secondaryButton} onClick={onRetry}>
           Tentar novamente
@@ -29,11 +29,11 @@ export function LoadMore({
   const loading = status === 'loading'
 
   return (
-    <div className="mt-10 flex justify-center">
+    <div className="mt-12 flex justify-center">
       {/* aria-disabled em vez de disabled: o botão continua focado durante o carregamento */}
       <button
         type="button"
-        className={secondaryButton}
+        className={`${secondaryButton} px-7`}
         aria-disabled={loading}
         onClick={loading ? undefined : onLoadMore}
       >

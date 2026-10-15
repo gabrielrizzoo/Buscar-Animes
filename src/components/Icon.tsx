@@ -1,5 +1,9 @@
 // Ícones de traço desenhados para o projeto (24×24), sem depender de bibliotecas.
 
+// Pontos do dado: círculos pequenos, que continuam visíveis em tamanhos reduzidos.
+const pip = (x: number, y: number) =>
+  `M${x - 0.6} ${y}a.6.6 0 1 0 1.2 0a.6.6 0 1 0-1.2 0`
+
 const paths = {
   search: ['M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z', 'm20 20-4.2-4.2'],
   'search-x': [
@@ -34,6 +38,31 @@ const paths = {
   ],
   'arrow-up-right': ['M7 17 17 7', 'M8 7h9v9'],
   code: ['m8 6-6 6 6 6', 'm16 6 6 6-6 6'],
+  dice: [
+    'M7 3.5h10A3.5 3.5 0 0 1 20.5 7v10a3.5 3.5 0 0 1-3.5 3.5H7A3.5 3.5 0 0 1 3.5 17V7A3.5 3.5 0 0 1 7 3.5Z',
+    pip(8.5, 8.5),
+    pip(15.5, 8.5),
+    pip(12, 12),
+    pip(8.5, 15.5),
+    pip(15.5, 15.5),
+  ],
+  flame: [
+    'M12 3c.6 3.2 5.5 5.6 5.5 10.5a5.5 5.5 0 0 1-11 0c0-2.4 1.1-4 2.4-5.2.2 1.5 1 2.6 2 3C10.6 8.8 10.8 5.6 12 3Z',
+  ],
+  calendar: [
+    'M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z',
+    'M4 10h16',
+    'M8 3v4',
+    'M16 3v4',
+  ],
+  trophy: [
+    'M7 4h10v5a5 5 0 0 1-10 0V4Z',
+    'M7 6H4.5v1A3.5 3.5 0 0 0 7.6 10.5',
+    'M17 6h2.5v1a3.5 3.5 0 0 1-3.1 3.5',
+    'M12 14v6',
+    'M8 20h8',
+  ],
+  x: ['M6 6l12 12', 'M18 6 6 18'],
 } as const
 
 export type IconName = keyof typeof paths

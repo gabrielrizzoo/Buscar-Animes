@@ -14,3 +14,10 @@ export function pushQueryToUrl(query: string): void {
   url.searchParams.set(QUERY_PARAM, query)
   window.history.pushState(null, '', url)
 }
+
+/** Volta para a página inicial sem busca, mantendo a busca anterior no histórico. */
+export function pushHomeToUrl(): void {
+  const url = new URL(window.location.href)
+  url.searchParams.delete(QUERY_PARAM)
+  window.history.pushState(null, '', url)
+}

@@ -3,17 +3,23 @@ import {
   hangingFetch,
   jsonResponse,
   makeMedia,
-  makeSearchResponse,
+  makePageResponse,
 } from '../test/fixtures.ts'
 import {
   ANILIST_API_URL,
   ApiHttpError,
   ApiResponseError,
+  DISCOVER_QUERIES,
   PAGE_SIZE,
+  RANDOM_POOL_SIZE,
+  RANDOM_QUERY,
   REQUEST_TIMEOUT_MS,
   RequestTimeoutError,
   SEARCH_QUERY,
+  buildDiscoverBody,
   buildSearchBody,
+  discoverAnime,
+  fetchRandomAnime,
   searchAnime,
 } from './anilist.ts'
 
@@ -44,7 +50,7 @@ describe('searchAnime', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
-        jsonResponse(makeSearchResponse([makeMedia()], { hasNextPage: true })),
+        jsonResponse(makePageResponse([makeMedia()], { hasNextPage: true })),
       )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -52,7 +58,6 @@ describe('searchAnime', () => {
       items: [makeMedia()],
       page: 1,
       hasNextPage: true,
-      total: null,
     })
     expect(fetchMock).toHaveBeenCalledWith(
       ANILIST_API_URL,
@@ -76,7 +81,6 @@ describe('searchAnime', () => {
       items: [],
       page: 3,
       hasNextPage: false,
-      total: null,
     })
   })
 
@@ -182,5 +186,92 @@ describe('searchAnime', () => {
     controller.abort()
 
     await expect(result).rejects.toMatchObject({ name: 'AbortError' })
+  })
+})
+
+describe('buildDiscoverBody', () => {
+  it.each([
+    ['trending', 'sort: TRENDING_DESC'],
+    ['top-rated', 'sort: SCORE_DESC'],
+  ] as const)('monta a lista %s só com página e tamanho', (list, sort) => {
+    const body = JSON.parse(buildDiscoverBody(list, 3))
+
+    expect(body.query).toBe(DISCOVER_QUERIES[list])
+    expect(body.query).toContain(sort)
+    expect(body.variables).toEqual({ page: 3, perPage: PAGE_SIZE })
+  })
+
+  it('envia a temporada atual na lista da temporada', () => {
+    const body = JSON.parse(
+      buildDiscoverBody('season', 1, new Date(2026, 9, 15)),
+    )
+
+    expect(body.query).toContain('season: $season, seasonYear: $seasonYear')
+    expect(body.variables).toEqual({
+      page: 1,
+      perPage: PAGE_SIZE,
+      season: 'FALL',
+      seasonYear: 2026,
+    })
+  })
+
+  it('filtra as sugestões: só animes, sem conteúdo adulto nem ecchi', () => {
+    for (const query of [...Object.values(DISCOVER_QUERIES), RANDOM_QUERY]) {
+      expect(query).toContain('type: ANIME')
+      expect(query).toContain('isAdult: false')
+      expect(query).toContain('genre_not_in: ["Ecchi"]')
+    }
+  })
+})
+
+describe('discoverAnime', () => {
+  it('faz um POST com a consulta da lista e retorna a página', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(makePageResponse([makeMedia()], { hasNextPage: true })),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(discoverAnime({ list: 'trending', page: 2 })).resolves.toEqual(
+      { items: [makeMedia()], page: 2, hasNextPage: true },
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      ANILIST_API_URL,
+      expect.objectContaining({ body: buildDiscoverBody('trending', 2) }),
+    )
+  })
+})
+
+describe('fetchRandomAnime', () => {
+  it.each([
+    [0, 1],
+    [0.5, RANDOM_POOL_SIZE / 2 + 1],
+    [0.9999, RANDOM_POOL_SIZE],
+  ])(
+    'com o número aleatório %d, pede a página %d da lista',
+    async (random, page) => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(jsonResponse(makePageResponse([makeMedia()])))
+      vi.stubGlobal('fetch', fetchMock)
+
+      await expect(fetchRandomAnime({ random: () => random })).resolves.toEqual(
+        makeMedia(),
+      )
+      expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+        query: RANDOM_QUERY,
+        variables: { page },
+      })
+    },
+  )
+
+  it('lança ApiResponseError quando a página sorteada vem vazia', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(makePageResponse([]))),
+    )
+
+    await expect(fetchRandomAnime()).rejects.toBeInstanceOf(ApiResponseError)
   })
 })

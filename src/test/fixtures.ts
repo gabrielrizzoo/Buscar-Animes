@@ -1,4 +1,5 @@
-import type { AniListMedia, AniListSearchResponse } from '../types/anilist.ts'
+import type { AniListMedia, AniListPageResponse } from '../types/anilist.ts'
+import type { Anime } from '../types/anime.ts'
 
 export function makeMedia(overrides: Partial<AniListMedia> = {}): AniListMedia {
   return {
@@ -9,6 +10,8 @@ export function makeMedia(overrides: Partial<AniListMedia> = {}): AniListMedia {
     format: 'TV',
     seasonYear: 2002,
     startDate: { year: 2002 },
+    episodes: 220,
+    genres: ['Action', 'Adventure', 'Comedy'],
     averageScore: 80,
     description:
       'Naruto Uzumaki quer se tornar <i>Hokage</i>.<br><br>(Source: MAL Rewrite)',
@@ -17,15 +20,38 @@ export function makeMedia(overrides: Partial<AniListMedia> = {}): AniListMedia {
         'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20.jpg',
       large:
         'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20.jpg',
+      color: '#e4a15d',
     },
     ...overrides,
   }
 }
 
-export function makeSearchResponse(
+/** Anime já normalizado, para testar componentes sem passar pela API. */
+export function makeAnime(overrides: Partial<Anime> = {}): Anime {
+  return {
+    id: '20',
+    title: 'Naruto',
+    englishTitle: null,
+    imageUrl: 'https://s4.anilist.co/capa-grande.jpg',
+    thumbnailUrl: 'https://s4.anilist.co/capa-media.jpg',
+    bannerUrl: null,
+    color: '#e4a15d',
+    url: 'https://myanimelist.net/anime/20',
+    linkSite: 'MyAnimeList',
+    type: 'TV',
+    year: 2002,
+    episodes: 220,
+    genres: ['Ação', 'Aventura'],
+    score: 8,
+    synopsis: 'Naruto Uzumaki quer se tornar Hokage.',
+    ...overrides,
+  }
+}
+
+export function makePageResponse(
   media: AniListMedia[],
   { hasNextPage = false }: { hasNextPage?: boolean } = {},
-): AniListSearchResponse {
+): AniListPageResponse {
   return { data: { Page: { pageInfo: { hasNextPage }, media } } }
 }
 

@@ -1,26 +1,73 @@
-import type { AniListMedia, AniListSearchResponse } from '../types/anilist.ts'
+import type { AniListMedia, AniListPageResponse } from '../types/anilist.ts'
+import { currentSeason } from '../utils/season.ts'
 
 export const ANILIST_API_URL = 'https://graphql.anilist.co'
 export const PAGE_SIZE = 12
 export const REQUEST_TIMEOUT_MS = 10_000
+/** O sorteio escolhe entre os N animes mais populares que passam pelos filtros. */
+export const RANDOM_POOL_SIZE = 1000
+
+/** Listas de sugestões exibidas na página inicial. */
+export type DiscoverListId = 'trending' | 'season' | 'top-rated'
+
+const MEDIA_FIELDS = `
+  id
+  idMal
+  siteUrl
+  title { romaji english }
+  format
+  seasonYear
+  startDate { year }
+  episodes
+  genres
+  averageScore
+  description(asHtml: false)
+  coverImage { extraLarge large color }
+`
+
+// As sugestões e o sorteio aparecem sem a pessoa ter pedido nada, então ficam só
+// com séries, filmes e ONAs, sem o gênero ecchi. A busca por título não tem esse filtro.
+const CURATED_FILTERS =
+  'type: ANIME, isAdult: false, format_in: [TV, MOVIE, ONA], genre_not_in: ["Ecchi"]'
 
 /** Busca por título, só animes e sem conteúdo adulto, na ordem de relevância do AniList. */
 export const SEARCH_QUERY = `
   query SearchAnime($search: String!, $page: Int!, $perPage: Int!) {
     Page(page: $page, perPage: $perPage) {
       pageInfo { hasNextPage }
-      media(search: $search, type: ANIME, isAdult: false, sort: SEARCH_MATCH) {
-        id
-        idMal
-        siteUrl
-        title { romaji english }
-        format
-        seasonYear
-        startDate { year }
-        averageScore
-        description(asHtml: false)
-        coverImage { extraLarge large }
-      }
+      media(search: $search, type: ANIME, isAdult: false, sort: SEARCH_MATCH) {${MEDIA_FIELDS}}
+    }
+  }
+`
+
+// O AniList trata variáveis nulas como filtro ("sem temporada"), em vez de ignorá-las,
+// por isso cada lista tem a própria consulta.
+function discoverQuery(variables: string, filters: string): string {
+  return `
+  query DiscoverAnime($page: Int!, $perPage: Int!${variables}) {
+    Page(page: $page, perPage: $perPage) {
+      pageInfo { hasNextPage }
+      media(${CURATED_FILTERS}, ${filters}) {${MEDIA_FIELDS}}
+    }
+  }
+`
+}
+
+export const DISCOVER_QUERIES: Record<DiscoverListId, string> = {
+  trending: discoverQuery('', 'sort: TRENDING_DESC'),
+  season: discoverQuery(
+    ', $season: MediaSeason!, $seasonYear: Int!',
+    'season: $season, seasonYear: $seasonYear, sort: POPULARITY_DESC',
+  ),
+  // O mínimo de popularidade evita títulos com nota alta, mas quase nenhum voto.
+  'top-rated': discoverQuery('', 'sort: SCORE_DESC, popularity_greater: 10000'),
+}
+
+/** Um anime por página: sortear a página é sortear o anime. */
+export const RANDOM_QUERY = `
+  query RandomAnime($page: Int!) {
+    Page(page: $page, perPage: 1) {
+      media(${CURATED_FILTERS}, status_in: [FINISHED, RELEASING], averageScore_greater: 70, sort: POPULARITY_DESC) {${MEDIA_FIELDS} bannerImage}
     }
   }
 `
@@ -57,19 +104,16 @@ export class RequestTimeoutError extends Error {
   }
 }
 
-export interface SearchAnimeParams {
-  query: string
-  page?: number
-  /** Permite cancelar a requisição (nova busca, componente desmontado). */
-  signal?: AbortSignal
-}
-
-export interface SearchAnimePage {
+/** Uma página de resultados, no formato que o hook de listas espera. */
+export interface MediaPage {
   items: AniListMedia[]
   page: number
   hasNextPage: boolean
-  /** O AniList não informa um total confiável, então este campo fica sempre `null`. */
-  total: number | null
+}
+
+interface RequestOptions {
+  /** Permite cancelar a requisição (nova busca, componente desmontado). */
+  signal?: AbortSignal
 }
 
 export function buildSearchBody(query: string, page = 1): string {
@@ -79,11 +123,84 @@ export function buildSearchBody(query: string, page = 1): string {
   })
 }
 
+export function buildDiscoverBody(
+  list: DiscoverListId,
+  page = 1,
+  now = new Date(),
+): string {
+  const { season, year } = currentSeason(now)
+  return JSON.stringify({
+    query: DISCOVER_QUERIES[list],
+    variables: {
+      page,
+      perPage: PAGE_SIZE,
+      ...(list === 'season' && { season, seasonYear: year }),
+    },
+  })
+}
+
+export function buildRandomBody(page: number): string {
+  return JSON.stringify({ query: RANDOM_QUERY, variables: { page } })
+}
+
 export async function searchAnime({
   query,
   page = 1,
   signal,
-}: SearchAnimeParams): Promise<SearchAnimePage> {
+}: RequestOptions & { query: string; page?: number }): Promise<MediaPage> {
+  return toMediaPage(
+    await postQuery(buildSearchBody(query, page), signal),
+    page,
+  )
+}
+
+export async function discoverAnime({
+  list,
+  page = 1,
+  signal,
+}: RequestOptions & {
+  list: DiscoverListId
+  page?: number
+}): Promise<MediaPage> {
+  return toMediaPage(
+    await postQuery(buildDiscoverBody(list, page), signal),
+    page,
+  )
+}
+
+/** Sorteia um anime entre os mais populares e bem avaliados. */
+export async function fetchRandomAnime({
+  signal,
+  random = Math.random,
+}: RequestOptions & {
+  /** Gerador de números entre 0 e 1, substituível nos testes. */
+  random?: () => number
+} = {}): Promise<AniListMedia> {
+  const page = 1 + Math.floor(random() * RANDOM_POOL_SIZE)
+  const [anime] = (await postQuery(buildRandomBody(page), signal)).media.filter(
+    isRecord,
+  )
+  // A lista sorteada sempre tem mais de RANDOM_POOL_SIZE animes; vir vazia é inesperado.
+  if (!anime) throw new ApiResponseError()
+  return anime
+}
+
+function toMediaPage(
+  { pageInfo, media }: AniListPageResponse['data']['Page'],
+  page: number,
+): MediaPage {
+  return {
+    items: media.filter(isRecord),
+    page,
+    hasNextPage: pageInfo?.hasNextPage === true,
+  }
+}
+
+/** Envia a consulta GraphQL e devolve o objeto `Page` da resposta. */
+async function postQuery(
+  body: string,
+  signal: AbortSignal | undefined,
+): Promise<AniListPageResponse['data']['Page']> {
   // Um único controller recebe tanto o cancelamento de quem chamou quanto o timeout.
   // (AbortSignal.any resolveria isso, mas não existe no Safari anterior ao 17.4.)
   const controller = new AbortController()
@@ -104,7 +221,7 @@ export async function searchAnime({
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: buildSearchBody(query, page),
+      body,
       signal: controller.signal,
     })
 
@@ -112,25 +229,18 @@ export async function searchAnime({
       throw new ApiHttpError(response.status, readRetryAfter(response.headers))
     }
 
-    let body: unknown
+    let json: unknown
     try {
-      body = await response.json()
+      json = await response.json()
     } catch (error) {
       if (controller.signal.aborted) throw error
       throw new ApiResponseError()
     }
 
-    if (!isSearchResponse(body)) {
+    if (!isPageResponse(json)) {
       throw new ApiResponseError()
     }
-
-    const { pageInfo, media } = body.data.Page
-    return {
-      items: media.filter(isRecord),
-      page,
-      hasNextPage: pageInfo?.hasNextPage === true,
-      total: null,
-    }
+    return json.data.Page
   } catch (error) {
     if (timedOut) throw new RequestTimeoutError()
     throw error
@@ -159,7 +269,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function isSearchResponse(body: unknown): body is AniListSearchResponse {
+function isPageResponse(body: unknown): body is AniListPageResponse {
   return (
     isRecord(body) &&
     isRecord(body.data) &&

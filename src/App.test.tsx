@@ -2,16 +2,19 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App.tsx'
-import { jsonResponse, makeMedia, makeSearchResponse } from './test/fixtures.ts'
+import { DISCOVER_QUERIES } from './services/anilist.ts'
+import { jsonResponse, makeMedia, makePageResponse } from './test/fixtures.ts'
 import type { AniListMedia } from './types/anilist.ts'
 
-interface SearchVariables {
-  search: string
+interface Variables {
+  search?: string
   page: number
-  perPage: number
+  season?: string
+  seasonYear?: number
 }
 
-type Route = (variables: SearchVariables) => Response | Promise<Response>
+type Operation = 'SearchAnime' | 'DiscoverAnime' | 'RandomAnime'
+type Route = (variables: Variables) => Response | Promise<Response>
 
 /** Complemento lido por leitores de tela no link de cada card. */
 const LINK_HINT = ' (abre no MyAnimeList em nova aba)'
@@ -19,34 +22,58 @@ const LINK_HINT = ' (abre no MyAnimeList em nova aba)'
 /** Texto visível na tela, ignorando a região de status lida só por leitores de tela. */
 const VISIBLE_TEXT = { selector: 'p', ignore: 'script, style, [role="status"]' }
 
-/** Substitui o fetch global por uma API GraphQL do AniList simulada. */
-function mockAniList(route: Route) {
+const emptyPage: Route = () => jsonResponse(makePageResponse([]))
+
+/**
+ * Substitui o fetch global por uma API GraphQL do AniList simulada, com uma rota
+ * para cada consulta. As sugestões respondem com uma lista vazia por padrão.
+ */
+function mockAniList(routes: Partial<Record<Operation, Route>> = {}) {
   const fetchMock = vi.fn(
-    async (_input: RequestInfo | URL, init?: RequestInit) =>
-      route(variablesOf(init)),
+    async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const { query, variables } = JSON.parse(String(init?.body))
+      const route = routes[operationOf(query)] ?? emptyPage
+      return route(variables)
+    },
   )
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
 }
 
-function variablesOf(init: RequestInit | undefined): SearchVariables {
-  return JSON.parse(String(init?.body)).variables
+function operationOf(query: string): Operation {
+  const match = /query (\w+)/.exec(query)?.[1]
+  if (
+    match === 'SearchAnime' ||
+    match === 'DiscoverAnime' ||
+    match === 'RandomAnime'
+  )
+    return match
+  throw new Error(`Consulta inesperada: ${query}`)
 }
 
-/** Variáveis enviadas na chamada número `index` ao fetch simulado. */
-function sentVariables(fetchMock: ReturnType<typeof mockAniList>, index = 0) {
-  return variablesOf(fetchMock.mock.calls[index]?.[1])
+/** Variáveis e lista (no caso das sugestões) de cada chamada a uma consulta. */
+function callsTo(fetchMock: ReturnType<typeof mockAniList>, name: Operation) {
+  return fetchMock.mock.calls
+    .map(([, init]) => JSON.parse(String(init?.body)))
+    .filter(({ query }) => operationOf(query) === name)
+    .map(({ query, variables }) => ({
+      ...(variables as Variables),
+      list: Object.entries(DISCOVER_QUERIES).find(([, q]) => q === query)?.[0],
+    }))
 }
 
-function animesFor(query: string, count: number, startId = 1): AniListMedia[] {
+function animesFor(title: string, count: number, startId = 1): AniListMedia[] {
   return Array.from({ length: count }, (_, index) =>
     makeMedia({
       id: startId + index,
       idMal: startId + index,
-      title: { romaji: `${query} ${startId + index}` },
+      title: { romaji: `${title} ${startId + index}` },
     }),
   )
 }
+
+const pageOf = (media: AniListMedia[], hasNextPage = false) =>
+  jsonResponse(makePageResponse(media, { hasNextPage }))
 
 async function searchFor(term: string) {
   const user = userEvent.setup()
@@ -58,45 +85,50 @@ async function searchFor(term: string) {
   return user
 }
 
-function cardTitles() {
-  return screen
+function region(name: string) {
+  return screen.getByRole('region', { name })
+}
+
+/** Títulos dos cards de uma seção ("Resultados da busca" ou "Descubra"). */
+function cardTitles(name = 'Resultados da busca') {
+  const section = screen.queryByRole('region', { name })
+  if (!section) return []
+  return within(section)
     .queryAllByRole('heading', { level: 3 })
     .map((heading) => heading.textContent?.replace(LINK_HINT, ''))
 }
 
-describe('App', () => {
+describe('App: busca', () => {
   it('busca ao pressionar Enter, mostra skeletons e depois os resultados', async () => {
     let respond!: (response: Response) => void
-    const fetchMock = mockAniList(
-      () => new Promise((resolve) => (respond = resolve)),
-    )
+    const fetchMock = mockAniList({
+      SearchAnime: () => new Promise((resolve) => (respond = resolve)),
+    })
     render(<App />)
 
     await searchFor('naruto')
 
-    const results = screen.getByRole('region', { name: 'Resultados da busca' })
+    const results = region('Resultados da busca')
     expect(results).toHaveAttribute('aria-busy', 'true')
-    expect(screen.getByRole('status')).toHaveTextContent(
+    expect(within(results).getByRole('status')).toHaveTextContent(
       'Buscando animes para “naruto”…',
     )
-    expect(sentVariables(fetchMock)).toMatchObject({
+    expect(callsTo(fetchMock, 'SearchAnime')[0]).toMatchObject({
       search: 'naruto',
       page: 1,
     })
 
-    await act(async () =>
-      respond(jsonResponse(makeSearchResponse(animesFor('Naruto', 2)))),
-    )
+    await act(async () => respond(pageOf(animesFor('Naruto', 2))))
 
     expect(cardTitles()).toEqual(['Naruto 1', 'Naruto 2'])
     expect(results).toHaveAttribute('aria-busy', 'false')
-    expect(screen.getByRole('status')).toHaveTextContent(
+    expect(within(results).getByRole('status')).toHaveTextContent(
       '2 resultados para “naruto”.',
     )
   })
 
   it('guarda o termo na URL e no título da página', async () => {
-    mockAniList(() => jsonResponse(makeSearchResponse(animesFor('Bleach', 1))))
+    mockAniList({ SearchAnime: () => pageOf(animesFor('Bleach', 1)) })
     render(<App />)
 
     await searchFor('bleach')
@@ -106,22 +138,23 @@ describe('App', () => {
     expect(document.title).toBe('bleach · Buscar Animes')
   })
 
-  it('refaz a busca que está na URL ao abrir a página', async () => {
+  it('refaz a busca que está na URL ao abrir a página, sem carregar sugestões', async () => {
     window.history.replaceState(null, '', '/?q=one%20piece')
-    const fetchMock = mockAniList(() =>
-      jsonResponse(makeSearchResponse(animesFor('One Piece', 1))),
-    )
+    const fetchMock = mockAniList({
+      SearchAnime: () => pageOf(animesFor('One Piece', 1)),
+    })
     render(<App />)
 
     expect(screen.getByRole('searchbox')).toHaveValue('one piece')
     await waitFor(() => expect(cardTitles()).toEqual(['One Piece 1']))
-    expect(sentVariables(fetchMock).search).toBe('one piece')
+    expect(callsTo(fetchMock, 'SearchAnime')[0]?.search).toBe('one piece')
+    expect(callsTo(fetchMock, 'DiscoverAnime')).toHaveLength(0)
   })
 
   it('volta para a busca anterior com o botão voltar do navegador', async () => {
-    mockAniList(({ search }) =>
-      jsonResponse(makeSearchResponse(animesFor(search, 1))),
-    )
+    mockAniList({
+      SearchAnime: ({ search }) => pageOf(animesFor(String(search), 1)),
+    })
     render(<App />)
 
     await searchFor('naruto')
@@ -140,24 +173,8 @@ describe('App', () => {
     expect(screen.getByRole('searchbox')).toHaveValue('naruto')
   })
 
-  it('busca ao clicar em uma sugestão', async () => {
-    const fetchMock = mockAniList(() =>
-      jsonResponse(makeSearchResponse(animesFor('Death Note', 1))),
-    )
-    render(<App />)
-
-    await userEvent
-      .setup()
-      .click(screen.getByRole('button', { name: 'Death Note' }))
-
-    await waitFor(() => expect(cardTitles()).toEqual(['Death Note 1']))
-    expect(screen.getByRole('searchbox')).toHaveValue('Death Note')
-    expect(window.location.search).toBe('?q=Death+Note')
-    expect(sentVariables(fetchMock).search).toBe('Death Note')
-  })
-
-  it('pede um termo quando só há espaços e não chama a API', async () => {
-    const fetchMock = mockAniList(() => jsonResponse(makeSearchResponse([])))
+  it('pede um termo quando só há espaços e não chama a busca', async () => {
+    const fetchMock = mockAniList()
     render(<App />)
 
     await searchFor('   ')
@@ -168,12 +185,12 @@ describe('App', () => {
         VISIBLE_TEXT,
       ),
     ).toBeInTheDocument()
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(callsTo(fetchMock, 'SearchAnime')).toHaveLength(0)
     expect(window.location.search).toBe('')
   })
 
   it('informa quando nada é encontrado, exibindo o termo como texto', async () => {
-    mockAniList(() => jsonResponse(makeSearchResponse([])))
+    mockAniList()
     render(<App />)
 
     await searchFor('<img src=x onerror=alert(1)>')
@@ -189,7 +206,11 @@ describe('App', () => {
   })
 
   it('mostra o erro e permite tentar novamente', async () => {
-    const fetchMock = mockAniList(() => jsonResponse({}, 503))
+    let failing = true
+    mockAniList({
+      SearchAnime: () =>
+        failing ? jsonResponse({}, 503) : pageOf(animesFor('Naruto', 1)),
+    })
     render(<App />)
 
     const user = await searchFor('naruto')
@@ -197,27 +218,26 @@ describe('App', () => {
       await screen.findByText(/instável no momento/, VISIBLE_TEXT),
     ).toBeInTheDocument()
 
-    fetchMock.mockImplementation(async () =>
-      jsonResponse(makeSearchResponse(animesFor('Naruto', 1))),
-    )
+    failing = false
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
 
     await waitFor(() => expect(cardTitles()).toEqual(['Naruto 1']))
   })
 
   it('carrega a próxima página e esconde o botão quando acabam os resultados', async () => {
-    const fetchMock = mockAniList(({ page }) =>
-      page === 2
-        ? jsonResponse(makeSearchResponse(animesFor('Naruto', 1, 13)))
-        : jsonResponse(
-            makeSearchResponse(animesFor('Naruto', 12), { hasNextPage: true }),
-          ),
-    )
+    const fetchMock = mockAniList({
+      SearchAnime: ({ page }) =>
+        page === 2
+          ? pageOf(animesFor('Naruto', 1, 13))
+          : pageOf(animesFor('Naruto', 12), true),
+    })
     render(<App />)
 
     const user = await searchFor('naruto')
     await waitFor(() => expect(cardTitles()).toHaveLength(12))
-    expect(screen.getByText('12 resultados para “naruto”')).toBeInTheDocument()
+    expect(
+      screen.getByText('12 resultados para “naruto”', VISIBLE_TEXT),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Carregar mais' }))
 
@@ -227,12 +247,232 @@ describe('App', () => {
     expect(
       screen.getByRole('link', { name: `Naruto 13${LINK_HINT}` }),
     ).toHaveFocus()
-    expect(sentVariables(fetchMock, 1)).toMatchObject({
+    expect(callsTo(fetchMock, 'SearchAnime')[1]).toMatchObject({
       search: 'naruto',
       page: 2,
     })
     expect(
       screen.queryByRole('button', { name: 'Carregar mais' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('limpa a busca e volta às sugestões sem recarregar a lista', async () => {
+    const fetchMock = mockAniList({
+      SearchAnime: () => pageOf(animesFor('Naruto', 1)),
+      DiscoverAnime: () => pageOf(animesFor('Em alta', 2)),
+    })
+    render(<App />)
+    await waitFor(() =>
+      expect(cardTitles('Descubra')).toEqual(['Em alta 1', 'Em alta 2']),
+    )
+
+    const user = await searchFor('naruto')
+    await waitFor(() => expect(cardTitles()).toEqual(['Naruto 1']))
+    expect(screen.queryByRole('region', { name: 'Descubra' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Limpar busca' }))
+
+    expect(cardTitles('Descubra')).toEqual(['Em alta 1', 'Em alta 2'])
+    expect(screen.getByRole('searchbox')).toHaveValue('')
+    expect(screen.getByRole('searchbox')).toHaveFocus()
+    expect(window.location.search).toBe('')
+    expect(callsTo(fetchMock, 'DiscoverAnime')).toHaveLength(1)
+  })
+})
+
+describe('App: sugestões', () => {
+  it('mostra a lista "Em alta" ao abrir a página', async () => {
+    const fetchMock = mockAniList({
+      DiscoverAnime: () => pageOf(animesFor('Em alta', 3)),
+    })
+    render(<App />)
+
+    expect(
+      screen.getByRole('button', { name: 'Em alta', pressed: true }),
+    ).toBeInTheDocument()
+    await waitFor(() => expect(cardTitles('Descubra')).toHaveLength(3))
+    expect(within(region('Descubra')).getByRole('status')).toHaveTextContent(
+      '3 animes na lista “Em alta”.',
+    )
+    expect(callsTo(fetchMock, 'DiscoverAnime')).toEqual([
+      { page: 1, perPage: 12, list: 'trending' },
+    ])
+  })
+
+  it('troca de lista pelas abas e carrega a temporada atual', async () => {
+    const fetchMock = mockAniList({
+      DiscoverAnime: ({ season }) =>
+        pageOf(animesFor(season ? 'Temporada' : 'Em alta', 2)),
+    })
+    const user = userEvent.setup()
+    render(<App />)
+    await waitFor(() => expect(cardTitles('Descubra')).toHaveLength(2))
+
+    await user.click(screen.getByRole('button', { name: 'Nesta temporada' }))
+
+    await waitFor(() =>
+      expect(cardTitles('Descubra')).toEqual(['Temporada 1', 'Temporada 2']),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Nesta temporada', pressed: true }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Em alta', pressed: false }),
+    ).toBeInTheDocument()
+    expect(callsTo(fetchMock, 'DiscoverAnime').at(-1)).toMatchObject({
+      list: 'season',
+      season: expect.any(String),
+      seasonYear: expect.any(Number),
+    })
+  })
+
+  it('carrega mais animes da lista escolhida', async () => {
+    const fetchMock = mockAniList({
+      DiscoverAnime: ({ page }) =>
+        page === 2
+          ? pageOf(animesFor('Em alta', 2, 13))
+          : pageOf(animesFor('Em alta', 12), true),
+    })
+    const user = userEvent.setup()
+    render(<App />)
+    await waitFor(() => expect(cardTitles('Descubra')).toHaveLength(12))
+
+    await user.click(screen.getByRole('button', { name: 'Carregar mais' }))
+
+    await waitFor(() => expect(cardTitles('Descubra')).toHaveLength(14))
+    expect(callsTo(fetchMock, 'DiscoverAnime').at(-1)).toMatchObject({
+      list: 'trending',
+      page: 2,
+    })
+  })
+
+  it('mostra o erro da lista e permite tentar novamente', async () => {
+    let failing = true
+    mockAniList({
+      DiscoverAnime: () =>
+        failing ? jsonResponse({}, 503) : pageOf(animesFor('Em alta', 1)),
+    })
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(
+      await screen.findByText(/instável no momento/, VISIBLE_TEXT),
+    ).toBeInTheDocument()
+
+    failing = false
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
+
+    await waitFor(() => expect(cardTitles('Descubra')).toEqual(['Em alta 1']))
+  })
+})
+
+describe('App: sorteio', () => {
+  it('sorteia um anime, mostra os detalhes e sorteia outro', async () => {
+    const picks = [
+      makeMedia({
+        title: { romaji: 'Sousou no Frieren', english: 'Frieren' },
+        idMal: 52991,
+        genres: ['Adventure', 'Drama', 'Fantasy'],
+        episodes: 28,
+        averageScore: 91,
+      }),
+      makeMedia({ id: 2, title: { romaji: 'Mushishi' } }),
+    ]
+    let respond!: (response: Response) => void
+    const fetchMock = mockAniList({
+      RandomAnime: () => new Promise((resolve) => (respond = resolve)),
+    })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Sortear um anime' }))
+
+    const spotlight = region('Sorteado para você')
+    expect(spotlight).toHaveFocus()
+    expect(within(spotlight).getByRole('status')).toHaveTextContent(
+      'Sorteando um anime…',
+    )
+    expect(callsTo(fetchMock, 'RandomAnime')[0]?.page).toBeGreaterThan(0)
+
+    await act(async () => respond(pageOf([picks[0]!])))
+
+    expect(
+      within(spotlight).getByRole('heading', { name: 'Sousou no Frieren' }),
+    ).toBeInTheDocument()
+    expect(within(spotlight).getByText('Frieren')).toBeInTheDocument()
+    expect(within(spotlight).getByText('28 episódios')).toBeInTheDocument()
+    expect(within(spotlight).getByText('9.1')).toBeInTheDocument()
+    expect(
+      within(within(spotlight).getByRole('list', { name: 'Gêneros' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Aventura', 'Drama', 'Fantasia'])
+    expect(
+      within(spotlight).getByRole('link', {
+        name: 'Ver no MyAnimeList (abre em nova aba)',
+      }),
+    ).toHaveAttribute('href', 'https://myanimelist.net/anime/52991')
+
+    const again = within(spotlight).getByRole('button', {
+      name: 'Sortear outro',
+    })
+    await user.click(again)
+    expect(again).toHaveTextContent('Sorteando…')
+    expect(again).toHaveFocus()
+
+    await act(async () => respond(pageOf([picks[1]!])))
+
+    expect(
+      within(spotlight).getByRole('heading', { name: 'Mushishi' }),
+    ).toBeInTheDocument()
+    expect(again).toHaveFocus()
+    expect(callsTo(fetchMock, 'RandomAnime')).toHaveLength(2)
+  })
+
+  it('fecha o sorteio e devolve o foco ao botão de sortear', async () => {
+    mockAniList({ RandomAnime: () => pageOf([makeMedia()]) })
+    const user = userEvent.setup()
+    render(<App />)
+
+    const pickButton = screen.getByRole('button', { name: 'Sortear um anime' })
+    await user.click(pickButton)
+    await screen.findByRole('heading', { name: 'NARUTO' })
+
+    await user.click(screen.getByRole('button', { name: 'Fechar sorteio' }))
+
+    expect(
+      screen.queryByRole('region', { name: 'Sorteado para você' }),
+    ).toBeNull()
+    expect(pickButton).toHaveFocus()
+  })
+
+  it('avisa quando o sorteio falha e permite tentar de novo', async () => {
+    let failing = true
+    mockAniList({
+      RandomAnime: () =>
+        failing
+          ? jsonResponse({}, 429, { 'Retry-After': '20' })
+          : pageOf([makeMedia()]),
+    })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Sortear um anime' }))
+
+    const spotlight = region('Sorteado para você')
+    expect(
+      await within(spotlight).findByText(/Aguarde cerca de 20 segundos/, {
+        selector: 'p:not([role="status"])',
+      }),
+    ).toBeInTheDocument()
+
+    failing = false
+    await user.click(
+      within(spotlight).getByRole('button', { name: 'Tentar de novo' }),
+    )
+
+    expect(
+      await within(spotlight).findByRole('heading', { name: 'NARUTO' }),
+    ).toBeInTheDocument()
   })
 })
