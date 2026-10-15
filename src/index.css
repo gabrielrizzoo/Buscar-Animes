@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Identidade visual da versão original (tag v1-vanilla) convertida em tokens do Tailwind */
+/* Paleta noturna com destaque âmbar, herdada da versão original e ampliada no redesign */
 @theme {
   --color-night-deep: #0b0f19;
   --color-night: #0f172a;
@@ -9,6 +9,7 @@
   --color-muted: #94a3b8;
   --color-accent: #f59e0b;
   --color-accent-strong: #d97706;
+  --color-accent-soft: #fcd34d;
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Chakra Petch', ui-sans-serif, system-ui, sans-serif;
@@ -16,12 +17,20 @@
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-cover: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-  --animate-fade-in: fade-in 0.6s ease both;
+  --animate-fade-in: fade-in 0.5s ease both;
+  --animate-rise-in: rise-in 0.5s var(--ease-smooth) both;
   --animate-shimmer: shimmer 1.5s linear infinite;
 
   @keyframes fade-in {
     from {
       opacity: 0;
+    }
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      translate: 0 12px;
     }
   }
 
@@ -36,15 +45,12 @@
 }
 
 @layer base {
+  html {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-night font-sans text-ink antialiased;
-    /* A versão original não definia line-height: mantém o espaçamento vertical dela */
-    line-height: normal;
-    background-image: radial-gradient(
-      circle at top,
-      var(--color-night-soft) 0%,
-      var(--color-night) 100%
-    );
+    @apply bg-night-deep font-sans text-ink antialiased;
   }
 
   /* Indicador de foco visível e consistente para links e botões navegados pelo teclado */
@@ -65,13 +71,43 @@
   }
 }
 
+/* Brilhos suaves no fundo da página (só gradientes, sem filtros caros de blur) */
+@utility bg-aurora {
+  background-image:
+    radial-gradient(
+      60rem 32rem at 50% -8rem,
+      rgb(245 158 11 / 0.14),
+      transparent 70%
+    ),
+    radial-gradient(
+      42rem 30rem at -10% 10%,
+      rgb(99 102 241 / 0.12),
+      transparent 70%
+    ),
+    radial-gradient(
+      40rem 28rem at 110% 18%,
+      rgb(236 72 153 / 0.07),
+      transparent 70%
+    );
+}
+
+/* Malha de pontos que some em direção às bordas */
+@utility bg-dots {
+  background-image: radial-gradient(
+    rgb(255 255 255 / 0.07) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, black, transparent);
+}
+
 /* Placeholder com brilho animado usado nos cards de carregamento */
 @utility skeleton {
   background-image: linear-gradient(
     90deg,
-    rgb(30 41 59 / 0.5) 25%,
-    rgb(51 65 85 / 0.7) 50%,
-    rgb(30 41 59 / 0.5) 75%
+    rgb(30 41 59 / 0.55) 25%,
+    rgb(51 65 85 / 0.75) 50%,
+    rgb(30 41 59 / 0.55) 75%
   );
   background-size: 200% 100%;
   animation: var(--animate-shimmer);

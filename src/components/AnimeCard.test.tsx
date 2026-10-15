@@ -21,7 +21,7 @@ describe('AnimeCard', () => {
   it('exibe título, capa, detalhes e sinopse', () => {
     render(<AnimeCard anime={makeAnime()} />)
 
-    expect(screen.getByRole('heading', { name: 'Naruto' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^Naruto/ })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Capa de Naruto' })).toHaveAttribute(
       'src',
       'https://cdn.myanimelist.net/images/anime/13/17405l.webp',
@@ -36,11 +36,11 @@ describe('AnimeCard', () => {
     ).toBeInTheDocument()
   })
 
-  it('abre o MyAnimeList em nova aba com um nome acessível descritivo', () => {
+  it('abre o MyAnimeList em nova aba a partir do título, avisando o leitor de tela', () => {
     render(<AnimeCard anime={makeAnime()} />)
 
     const link = screen.getByRole('link', {
-      name: 'Saber Mais sobre Naruto no MyAnimeList (abre em nova aba)',
+      name: 'Naruto (abre no MyAnimeList em nova aba)',
     })
     expect(link).toHaveAttribute(
       'href',
@@ -66,7 +66,7 @@ describe('AnimeCard', () => {
       screen.queryByText('Tipo:', { exact: false }),
     ).not.toBeInTheDocument()
     expect(screen.getByText('TBA')).toBeInTheDocument()
-    expect(screen.getByText('S/ Nota')).toBeInTheDocument()
+    expect(screen.getByText('Sem nota')).toBeInTheDocument()
     expect(screen.getByText(MISSING_SYNOPSIS)).toBeInTheDocument()
   })
 
@@ -97,7 +97,11 @@ describe('AnimeCard', () => {
       <AnimeCard anime={makeAnime({ title, imageUrl: null })} />,
     )
 
-    expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', {
+        name: `${title} (abre no MyAnimeList em nova aba)`,
+      }),
+    ).toBeInTheDocument()
     expect(container.querySelector('img')).toBeNull()
   })
 })

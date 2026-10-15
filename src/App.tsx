@@ -3,6 +3,7 @@ import { Footer } from './components/Footer.tsx'
 import { Header } from './components/Header.tsx'
 import { SearchForm } from './components/SearchForm.tsx'
 import { SearchResults } from './components/SearchResults.tsx'
+import { SearchSuggestions } from './components/SearchSuggestions.tsx'
 import { useAnimeSearch } from './hooks/useAnimeSearch.ts'
 import { pushQueryToUrl, readQueryFromUrl } from './utils/urlQuery.ts'
 
@@ -38,16 +39,32 @@ export default function App() {
     void search(query)
   }
 
+  function handleSuggestion(title: string) {
+    setInputValue(title)
+    handleSearch(title)
+  }
+
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="relative isolate flex min-h-screen flex-col overflow-x-clip">
+      {/* Fundo decorativo: brilhos e malha de pontos no topo da página */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[48rem] bg-aurora"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[40rem] bg-dots"
+      />
+
       <Header />
-      <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col items-center px-6 pb-20">
-        <div className="mb-12 w-full max-w-[650px]">
+      <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 pb-24 sm:px-6">
+        <div className="mx-auto mb-14 max-w-2xl">
           <SearchForm
             value={inputValue}
             onValueChange={setInputValue}
             onSearch={handleSearch}
           />
+          <SearchSuggestions onSelect={handleSuggestion} />
         </div>
         <SearchResults state={state} onRetry={retry} onLoadMore={loadMore} />
       </main>

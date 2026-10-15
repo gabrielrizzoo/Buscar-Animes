@@ -11,6 +11,9 @@ import type { JikanAnime } from './types/jikan.ts'
 
 type Route = (params: URLSearchParams) => Response | Promise<Response>
 
+/** Complemento lido por leitores de tela no link de cada card. */
+const LINK_HINT = ' (abre no MyAnimeList em nova aba)'
+
 /** Texto visível na tela, ignorando a região de status lida só por leitores de tela. */
 const VISIBLE_TEXT = { selector: 'p', ignore: 'script, style, [role="status"]' }
 
@@ -46,7 +49,7 @@ async function searchFor(term: string) {
 function cardTitles() {
   return screen
     .queryAllByRole('heading', { level: 3 })
-    .map((heading) => heading.textContent)
+    .map((heading) => heading.textContent?.replace(LINK_HINT, ''))
 }
 
 describe('App', () => {
@@ -127,6 +130,24 @@ describe('App', () => {
     expect(screen.getByRole('searchbox')).toHaveValue('naruto')
   })
 
+  it('busca ao clicar em uma sugestão', async () => {
+    const fetchMock = mockJikan(() =>
+      jsonResponse(makeSearchResponse(animesFor('Death Note', 1))),
+    )
+    render(<App />)
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Death Note' }))
+
+    await waitFor(() => expect(cardTitles()).toEqual(['Death Note 1']))
+    expect(screen.getByRole('searchbox')).toHaveValue('Death Note')
+    expect(window.location.search).toBe('?q=Death+Note')
+    expect(
+      new URL(String(fetchMock.mock.calls[0]?.[0])).searchParams.get('q'),
+    ).toBe('Death Note')
+  })
+
   it('pede um termo quando só há espaços e não chama a API', async () => {
     const fetchMock = mockJikan(() => jsonResponse(makeSearchResponse([])))
     render(<App />)
@@ -203,7 +224,7 @@ describe('App', () => {
     expect(cardTitles().at(-1)).toBe('Naruto 13')
     // O foco vai para o primeiro card novo, já que o botão some na última página
     expect(
-      screen.getByRole('link', { name: /Saber Mais sobre Naruto 13 / }),
+      screen.getByRole('link', { name: `Naruto 13${LINK_HINT}` }),
     ).toHaveFocus()
     expect(
       new URL(String(fetchMock.mock.calls[1]?.[0])).searchParams.get('page'),

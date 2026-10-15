@@ -11,22 +11,26 @@ Aplicação web para buscar animes pelo nome e ver capa, tipo, ano, nota e sinop
 
 **Demonstração:** <https://buscar-animes.vercel.app>
 
+> [!WARNING]
+> A API pública da Jikan, fonte de dados deste projeto, foi [descontinuada pelo mantenedor em 1º de outubro de 2026](https://github.com/jikan-me/jikan-rest/issues/613). Enquanto a fonte de dados não for substituída, as buscas terminam com uma mensagem de erro e o botão "Tentar novamente".
+
 <p align="center">
-  <img src="docs/screenshots/inicio-desktop.png" alt="Tela inicial no desktop, com o título Buscar Animes e o campo de busca" width="68%" />
+  <img src="docs/screenshots/inicio-desktop.png" alt="Tela inicial no desktop, com o título Encontre seu próximo anime, o campo de busca e sugestões de títulos" width="68%" />
   &nbsp;
-  <img src="docs/screenshots/inicio-mobile.png" alt="Tela inicial no celular, com o formulário de busca em coluna" width="22%" />
+  <img src="docs/screenshots/inicio-mobile.png" alt="Tela inicial no celular, com o campo de busca e o botão Explorar empilhados" width="22%" />
 </p>
 
 ## Funcionalidades
 
 - **Busca por nome** pelo botão "Explorar" ou pela tecla Enter, com conteúdo adulto filtrado pela própria API (`sfw=true`).
-- **Cards de resultado** com capa, título, tipo, ano de lançamento, nota, sinopse resumida em quatro linhas e link para a página do anime no MyAnimeList.
+- **Sugestões de busca** ("Experimente: One Piece, Frieren...") para quem chega sem um título em mente.
+- **Cards em formato de pôster** com capa, nota, título, tipo, ano de lançamento e sinopse resumida em três linhas. O card inteiro abre a página do anime no MyAnimeList.
 - **Paginação** com 12 resultados por vez e botão "Carregar mais".
 - **Busca na URL** (`?q=naruto`): dá para compartilhar o link de uma busca, e os botões voltar/avançar do navegador refazem as buscas anteriores.
 - **Estados de interface** para carregamento (skeleton), termo vazio, nenhum resultado e erros, com mensagens específicas para tempo esgotado (10 s), limite de requisições (HTTP 429), instabilidade do serviço (HTTP 5xx), falha de conexão e resposta inesperada, além do botão "Tentar novamente".
 - **Capa substituta** quando o anime não tem imagem ou ela não carrega.
 - **Acessibilidade:** landmarks semânticos, região de status lida por leitores de tela, links com nome descritivo, foco visível, navegação completa pelo teclado e respeito à preferência de movimento reduzido (`prefers-reduced-motion`).
-- **Layout responsivo** de 320 px até telas largas.
+- **Layout responsivo:** lista compacta no celular e grade de 2 a 4 colunas em telas maiores, de 320 px até telas largas.
 
 <details>
 <summary>Estado de carregamento</summary>
@@ -56,13 +60,14 @@ Não há bibliotecas de roteamento, de estado global ou de requisições: o app 
 - **Timeout próprio de 10 segundos**, combinado com o cancelamento externo sem depender de `AbortSignal.any`, que não existe no Safari anterior ao 17.4 ([`jikan.ts`](src/services/jikan.ts)).
 - **Dados validados na entrada.** A resposta da API passa por uma normalização que trata campos ausentes e aceita apenas capas `https` e links do MyAnimeList, o que bloqueia URLs como `javascript:` ([`normalizeAnime.ts`](src/utils/normalizeAnime.ts)). Todo texto é renderizado pelo React como texto, e o lint proíbe `dangerouslySetInnerHTML`.
 - **Erros tipados** (`JikanHttpError`, `JikanResponseError`, `RequestTimeoutError`) traduzidos em mensagens claras para o usuário ([`searchErrors.ts`](src/utils/searchErrors.ts)).
-- **Identidade visual preservada.** Cores, fontes e o efeito de vidro da versão original viraram tokens do Tailwind em [`index.css`](src/index.css).
+- **Identidade visual em tokens.** O tema noturno com destaque âmbar, herdado da versão original, está definido como tokens do Tailwind em [`index.css`](src/index.css). O brilho do fundo usa só gradientes, sem filtros de blur pesados, e os ícones são SVGs próprios, sem biblioteca externa ([`Icon.tsx`](src/components/Icon.tsx)).
+- **Card inteiro clicável sem links duplicados.** O link do título se estende sobre o card, então o clique funciona em qualquer ponto, mas o leitor de tela ouve um único link por anime.
 
 ## Estrutura
 
 ```text
 src/
-├── components/   # Header, SearchForm, SearchResults, AnimeCard, CoverImage, LoadMore...
+├── components/   # Header, SearchForm, SearchSuggestions, SearchResults, AnimeCard, Icon...
 ├── hooks/        # useAnimeSearch: estado da busca, paginação e cancelamento
 ├── services/     # jikan.ts: requisição, timeout e erros da API
 ├── types/        # Tipos da resposta da Jikan e do modelo exibido
@@ -75,7 +80,7 @@ src/
 
 ## Como executar localmente
 
-Pré-requisitos: [Node.js](https://nodejs.org/) 24 LTS (versão indicada em `.nvmrc`; o mínimo aceito é 22.12) e npm.
+Pré-requisitos: [Node.js](https://nodejs.org/) 24 LTS (versão indicada em `.nvmrc` e no campo `engines` do `package.json`) e npm.
 
 ```bash
 git clone https://github.com/gabrielrizzoo/Buscar-Animes.git
@@ -106,7 +111,7 @@ Os testes usam Vitest, Testing Library e uma API Jikan simulada, então não dep
 - a montagem da URL da requisição e cada tipo de erro (HTTP, JSON inválido, falha de rede, timeout e cancelamento);
 - a normalização dos dados, incluindo campos ausentes e URLs inseguras;
 - o hook de busca: busca concorrente (a mais recente vence), "Carregar mais", nova tentativa após erro e cancelamento ao desmontar;
-- os componentes e o fluxo completo: Enter, skeleton, resultados, URL e título da página, botão voltar do navegador, termo vazio, nenhum resultado, erro com nova tentativa, paginação e foco do teclado.
+- os componentes e o fluxo completo: Enter, sugestões de busca, skeleton, resultados, URL e título da página, botão voltar do navegador, termo vazio, nenhum resultado, erro com nova tentativa, paginação e foco do teclado.
 
 ```bash
 npm test
@@ -118,7 +123,7 @@ npm test
 
 ## Limitações conhecidas
 
-- **Dependência da API Jikan.** É um serviço gratuito e não oficial, com limite de 3 requisições por segundo e 60 por minuto, e que pode ficar fora do ar. Nesses casos o app mostra uma mensagem e permite tentar de novo, mas não tem fonte de dados alternativa.
+- **API Jikan descontinuada.** A instância pública da Jikan foi desligada em 1º de outubro de 2026. O app trata a falha com uma mensagem e o botão "Tentar novamente", mas só volta a exibir resultados quando a fonte de dados for trocada.
 - **Idioma dos dados.** Títulos e sinopses vêm do MyAnimeList como estão, geralmente em inglês ou em japonês romanizado, sem tradução.
 - **Sem filtros.** A busca usa apenas o parâmetro `q` da API; filtros por tipo, gênero e ordenação ainda não foram implementados.
 

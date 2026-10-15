@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
 import type { Anime } from '../types/anime.ts'
 import { formatScore } from '../utils/format.ts'
 import { CoverImage } from './CoverImage.tsx'
+import { Icon, StarIcon } from './Icon.tsx'
 import { cardSurface } from './styles.ts'
 
 export const MISSING_SYNOPSIS =
@@ -13,70 +13,82 @@ interface AnimeCardProps {
   animationDelay?: number
 }
 
+/**
+ * Card do resultado. O link do título se estende sobre o card inteiro, então
+ * qualquer clique abre o MyAnimeList, mas leitores de tela ouvem um único link.
+ */
 export function AnimeCard({ anime, animationDelay = 0 }: AnimeCardProps) {
   return (
     <article
       style={{ animationDelay: `${animationDelay}s` }}
-      className={`${cardSurface} group transition-[translate,scale,box-shadow,border-color] duration-400 ease-smooth hover:border-t-white/30 hover:shadow-[0_20px_40px_rgb(0_0_0/0.5)] motion-safe:animate-fade-in motion-safe:hover:-translate-y-1.5 motion-safe:hover:scale-[1.01]`}
+      className={`${cardSurface} group transition-[translate,border-color,background-color,box-shadow] duration-300 ease-smooth hover:border-accent/40 hover:bg-night/80 hover:shadow-[0_24px_48px_-24px_rgb(245_158_11/0.4)] has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-accent motion-safe:animate-rise-in motion-safe:hover:-translate-y-1`}
     >
-      <CoverImage src={anime.imageUrl} title={anime.title} />
+      <div className="relative w-24 shrink-0 self-start overflow-hidden rounded-xl sm:w-full sm:rounded-none">
+        <CoverImage src={anime.imageUrl} title={anime.title} />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-1/3 bg-linear-to-t from-night/90 to-transparent sm:block"
+        />
+        <ScoreBadge score={anime.score} />
+      </div>
 
-      <div className="flex flex-1 flex-col p-7">
-        <h3 className="mb-2.5 text-xl leading-[1.3] font-semibold">
-          {anime.title}
+      <div className="flex min-w-0 flex-1 flex-col py-0.5 sm:p-4 sm:pt-3.5">
+        <h3 className="line-clamp-2 text-[0.95rem] leading-snug font-semibold text-ink sm:text-base">
+          <a
+            href={anime.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-hidden"
+          >
+            {anime.title}{' '}
+            <span className="sr-only">(abre no MyAnimeList em nova aba)</span>
+          </a>
         </h3>
 
-        <div className="mb-5 flex flex-wrap gap-2 text-[0.8rem] font-medium">
-          {anime.type && <Badge label="Tipo">{anime.type}</Badge>}
-          <Badge label="Ano">{anime.year ?? 'TBA'}</Badge>
-          {anime.score !== null ? (
-            <Badge label="Nota" highlight>
-              <span aria-hidden="true">⭐ </span>
-              {formatScore(anime.score)}
-            </Badge>
-          ) : (
-            <Badge label="Nota" highlight>
-              <span aria-hidden="true">S/ Nota</span>
-              <span className="sr-only">sem nota</span>
-            </Badge>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-xs font-medium tracking-wide text-muted uppercase">
+          {anime.type && (
+            <>
+              <span>
+                <span className="sr-only">Tipo:</span> {anime.type}
+              </span>
+              <span aria-hidden="true" className="text-white/25">
+                •
+              </span>
+            </>
           )}
-        </div>
+          <span>
+            <span className="sr-only">Ano:</span> {anime.year ?? 'TBA'}
+          </span>
+        </p>
 
-        <p className="mb-8 line-clamp-4 text-[0.95rem] leading-[1.7] text-muted">
+        <p className="mt-2.5 line-clamp-3 text-sm leading-relaxed text-muted">
           {anime.synopsis ?? MISSING_SYNOPSIS}
         </p>
 
-        <a
-          href={anime.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-auto flex items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] px-4 py-[0.9rem] font-semibold text-ink transition-[color,background-color,border-color] duration-300 hover:border-ink hover:bg-ink hover:text-night"
+        <span
+          aria-hidden="true"
+          className="mt-auto inline-flex items-center gap-1 pt-3 text-xs font-semibold text-accent/80 transition-colors duration-200 group-hover:text-accent-soft"
         >
-          Saber Mais{' '}
-          <span className="sr-only">
-            sobre {anime.title} no MyAnimeList (abre em nova aba)
-          </span>
-        </a>
+          MyAnimeList
+          <Icon name="arrow-up-right" className="size-3.5" />
+        </span>
       </div>
     </article>
   )
 }
 
-interface BadgeProps {
-  /** Rótulo lido apenas por leitores de tela (ex.: "Ano: 2002"). */
-  label: string
-  highlight?: boolean
-  children: ReactNode
-}
-
-function Badge({ label, highlight = false, children }: BadgeProps) {
-  const colors = highlight
-    ? 'border-accent/20 bg-accent/5 text-accent'
-    : 'border-white/8 bg-white/5 text-ink'
-
+function ScoreBadge({ score }: { score: number | null }) {
   return (
-    <span className={`rounded-full border px-[0.8rem] py-[0.3rem] ${colors}`}>
-      <span className="sr-only">{label}:</span> {children}
+    <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-night-deep/85 px-2 py-0.5 text-[0.7rem] font-semibold text-accent-soft ring-1 ring-white/10 backdrop-blur-sm">
+      <span className="sr-only">Nota:</span>
+      {score !== null ? (
+        <>
+          <StarIcon className="size-3 text-accent" />
+          {formatScore(score)}
+        </>
+      ) : (
+        'Sem nota'
+      )}
     </span>
   )
 }
