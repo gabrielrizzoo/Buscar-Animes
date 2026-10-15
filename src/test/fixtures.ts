@@ -1,54 +1,42 @@
-import type { JikanAnime, JikanSearchResponse } from '../types/jikan.ts'
+import type { AniListMedia, AniListSearchResponse } from '../types/anilist.ts'
 
-export function makeJikanAnime(
-  overrides: Partial<JikanAnime> = {},
-): JikanAnime {
+export function makeMedia(overrides: Partial<AniListMedia> = {}): AniListMedia {
   return {
-    mal_id: 20,
-    url: 'https://myanimelist.net/anime/20/Naruto',
-    title: 'Naruto',
-    type: 'TV',
-    year: 2002,
-    score: 8.01,
-    synopsis: 'Naruto Uzumaki quer se tornar Hokage.',
-    images: {
-      webp: {
-        large_image_url:
-          'https://cdn.myanimelist.net/images/anime/13/17405l.webp',
-      },
-      jpg: {
-        large_image_url:
-          'https://cdn.myanimelist.net/images/anime/13/17405l.jpg',
-        image_url: 'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
-      },
+    id: 20,
+    idMal: 20,
+    siteUrl: 'https://anilist.co/anime/20',
+    title: { romaji: 'NARUTO', english: 'Naruto' },
+    format: 'TV',
+    seasonYear: 2002,
+    startDate: { year: 2002 },
+    averageScore: 80,
+    description:
+      'Naruto Uzumaki quer se tornar <i>Hokage</i>.<br><br>(Source: MAL Rewrite)',
+    coverImage: {
+      extraLarge:
+        'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20.jpg',
+      large:
+        'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20.jpg',
     },
-    aired: { prop: { from: { year: 2002 } } },
     ...overrides,
   }
 }
 
 export function makeSearchResponse(
-  data: JikanAnime[],
-  pagination: { hasNextPage?: boolean; total?: number } = {},
-): JikanSearchResponse {
-  return {
-    data,
-    pagination: {
-      current_page: 1,
-      has_next_page: pagination.hasNextPage ?? false,
-      items: {
-        count: data.length,
-        total: pagination.total ?? data.length,
-        per_page: 12,
-      },
-    },
-  }
+  media: AniListMedia[],
+  { hasNextPage = false }: { hasNextPage?: boolean } = {},
+): AniListSearchResponse {
+  return { data: { Page: { pageInfo: { hasNextPage }, media } } }
 }
 
-export function jsonResponse(body: unknown, status = 200): Response {
+export function jsonResponse(
+  body: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
   })
 }
 

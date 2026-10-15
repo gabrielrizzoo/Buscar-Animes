@@ -15,7 +15,7 @@ interface AnimeCardProps {
 
 /**
  * Card do resultado. O link do título se estende sobre o card inteiro, então
- * qualquer clique abre o MyAnimeList, mas leitores de tela ouvem um único link.
+ * qualquer clique abre a página do anime, mas leitores de tela ouvem um único link.
  */
 export function AnimeCard({ anime, animationDelay = 0 }: AnimeCardProps) {
   return (
@@ -24,7 +24,11 @@ export function AnimeCard({ anime, animationDelay = 0 }: AnimeCardProps) {
       className={`${cardSurface} group transition-[translate,border-color,background-color,box-shadow] duration-300 ease-smooth hover:border-accent/40 hover:bg-night/80 hover:shadow-[0_24px_48px_-24px_rgb(245_158_11/0.4)] has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-accent motion-safe:animate-rise-in motion-safe:hover:-translate-y-1`}
     >
       <div className="relative w-24 shrink-0 self-start overflow-hidden rounded-xl sm:w-full sm:rounded-none">
-        <CoverImage src={anime.imageUrl} title={anime.title} />
+        <CoverImage
+          src={anime.imageUrl}
+          thumbnailSrc={anime.thumbnailUrl}
+          title={anime.title}
+        />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-1/3 bg-linear-to-t from-night/90 to-transparent sm:block"
@@ -41,7 +45,9 @@ export function AnimeCard({ anime, animationDelay = 0 }: AnimeCardProps) {
             className="after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-hidden"
           >
             {anime.title}{' '}
-            <span className="sr-only">(abre no MyAnimeList em nova aba)</span>
+            <span className="sr-only">
+              (abre no {anime.linkSite} em nova aba)
+            </span>
           </a>
         </h3>
 
@@ -69,7 +75,7 @@ export function AnimeCard({ anime, animationDelay = 0 }: AnimeCardProps) {
           aria-hidden="true"
           className="mt-auto inline-flex items-center gap-1 pt-3 text-xs font-semibold text-accent/80 transition-colors duration-200 group-hover:text-accent-soft"
         >
-          MyAnimeList
+          {anime.linkSite}
           <Icon name="arrow-up-right" className="size-3.5" />
         </span>
       </div>

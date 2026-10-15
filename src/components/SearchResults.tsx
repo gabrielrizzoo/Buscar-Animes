@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useRef } from 'react'
 import type { AnimeSearchState } from '../hooks/useAnimeSearch.ts'
-import { PAGE_SIZE } from '../services/jikan.ts'
+import { PAGE_SIZE } from '../services/anilist.ts'
 import { formatResultSummary } from '../utils/format.ts'
 import { describeSearchError } from '../utils/searchErrors.ts'
 import { AnimeCard } from './AnimeCard.tsx'

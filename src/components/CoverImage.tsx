@@ -3,19 +3,31 @@ import { Icon } from './Icon.tsx'
 
 interface CoverImageProps {
   src: string | null
+  /** Versão menor da capa, usada quando o card é estreito (lista do celular). */
+  thumbnailSrc?: string | null
   title: string
 }
 
+// Larguras das capas do AniList: `large` tem 230 px e `extraLarge`, 460 px.
+const THUMBNAIL_WIDTH = 230
+const LARGE_WIDTH = 460
+
 /** Capa em formato de pôster com fallback local quando não há imagem ou ela falha ao carregar. */
-export function CoverImage({ src, title }: CoverImageProps) {
+export function CoverImage({ src, thumbnailSrc, title }: CoverImageProps) {
   const [failed, setFailed] = useState(false)
   const showImage = src !== null && !failed
+  const srcSet =
+    src && thumbnailSrc && thumbnailSrc !== src
+      ? `${thumbnailSrc} ${THUMBNAIL_WIDTH}w, ${src} ${LARGE_WIDTH}w`
+      : undefined
 
   return (
     <div className="aspect-[5/7] w-full overflow-hidden bg-night-deep">
       {showImage ? (
         <img
           src={src}
+          srcSet={srcSet}
+          sizes={srcSet ? '(min-width: 640px) 290px, 96px' : undefined}
           alt={`Capa de ${title}`}
           loading="lazy"
           decoding="async"

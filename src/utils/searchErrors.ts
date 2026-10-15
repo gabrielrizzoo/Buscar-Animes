@@ -1,9 +1,9 @@
-import {
-  JikanHttpError,
-  JikanResponseError,
-  RequestTimeoutError,
-} from '../services/jikan.ts'
 import type { IconName } from '../components/Icon.tsx'
+import {
+  ApiHttpError,
+  ApiResponseError,
+  RequestTimeoutError,
+} from '../services/anilist.ts'
 
 export interface ErrorFeedback {
   icon: IconName
@@ -20,19 +20,21 @@ export function describeSearchError(error: unknown): ErrorFeedback {
     }
   }
 
-  if (error instanceof JikanHttpError) {
+  if (error instanceof ApiHttpError) {
     if (error.status === 429) {
+      const wait = error.retryAfterSeconds
+        ? `cerca de ${error.retryAfterSeconds} segundos`
+        : 'alguns segundos'
       return {
         icon: 'clock',
-        message:
-          'Muitas requisições. O banco de dados do MyAnimeList pede para você esperar alguns segundos e tentar novamente.',
+        message: `Muitas buscas em pouco tempo. Aguarde ${wait} e tente novamente.`,
       }
     }
     if (error.status >= 500) {
       return {
         icon: 'server',
         message:
-          'O serviço da Jikan (MyAnimeList) está instável no momento. Tente novamente mais tarde.',
+          'O serviço do AniList está instável no momento. Tente novamente mais tarde.',
       }
     }
     return {
@@ -42,7 +44,7 @@ export function describeSearchError(error: unknown): ErrorFeedback {
     }
   }
 
-  if (error instanceof JikanResponseError) {
+  if (error instanceof ApiResponseError) {
     return {
       icon: 'alert',
       message:

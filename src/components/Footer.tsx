@@ -14,23 +14,14 @@ export function Footer() {
       <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-2 px-6 py-8 text-center text-sm text-muted sm:flex-row sm:text-left">
         <p>© {YEARS} Buscar Animes. Todos os direitos reservados.</p>
         <p>
-          Dados do{' '}
+          Dados fornecidos pelo{' '}
           <a
             className={linkClass}
-            href="https://myanimelist.net/"
+            href="https://anilist.co/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            MyAnimeList
-          </a>{' '}
-          via{' '}
-          <a
-            className={linkClass}
-            href="https://jikan.moe/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            API Jikan
+            AniList
           </a>
         </p>
       </div>
