@@ -38,7 +38,7 @@ Nesta versão, abandonamos a arquitetura básica de "estudos iniciais" para entr
 Para usar ativamente as bases de dados em sua própria máquina, siga os passos mínimos:
 
 1. **Clone o repositório**:  
-   `git clone https://github.com/gabrielxsj/Buscar_Animes.git`
+   `git clone https://github.com/gabrielrizzoo/Buscar-Animes.git`
 2. **Abra o ambiente local** no seu editor de código predileto (ex: VS Code).
 3. **Execute o projeto**: Não precisa instalar NPM nem nada pesado. Apenas habilite alguma porta clicando no *Live Server* de seu editor ou abra o arquivo `index.html` diretamente em um navegador.
 4. Digite "Naruto, Death Note" ou tente pesquisar sua infância e clique `Enter`!

@@ -173,7 +173,7 @@ h1 {
 
 .resultados-pesquisa {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
     gap: 2.5rem;
     /* Mais respiro entre os cards na vitrine */
     width: 100%;
@@ -283,7 +283,8 @@ h1 {
     /* O segredo do Design de leitura Premium */
     margin-bottom: 2rem;
     display: -webkit-box;
-    -webkit-line-clam: 4;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
     flex: 1;
@@ -352,6 +353,6 @@ footer {
     }
 
     .resultados-pesquisa {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     }
 }
