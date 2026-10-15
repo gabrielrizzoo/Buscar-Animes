@@ -1,61 +1,143 @@
-# 🌌 Buscar Animes
-### Explore todo o universo dos animes num clique. (Versão 2.0 Premium)
+# Buscar Animes
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white) 
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white) 
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![Fetch API](https://img.shields.io/badge/Fetch_API-232F3E?style=for-the-badge&logo=Web&logoColor=white)
+[![CI](https://github.com/gabrielrizzoo/Buscar-Animes/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielrizzoo/Buscar-Animes/actions/workflows/ci.yml)
+![React](https://img.shields.io/badge/React_19-20232A?logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite_8-646CFF?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?logo=tailwindcss&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)
 
-Uma aplicação robusta de consulta em tempo real projetada para proporcionar a experiência definitiva na busca pelo seu anime favorito, tudo isso em um Design Web Premium. Basta digitar o nome de um anime, gênero ou qualquer palavra-chave relacionada e a aplicação retornará título, sinopse e demais detalhes dos resultados mais relevantes.
+Aplicação web para buscar animes pelo nome e ver capa, tipo, ano, nota e sinopse de cada resultado. Os dados vêm do [MyAnimeList](https://myanimelist.net/), consultados pela [API Jikan](https://jikan.moe/).
 
----
+**Demonstração:** <https://buscar-animes.vercel.app>
 
-## 📖 A Origem do Projeto (Imersão Alura 2024)
+<p align="center">
+  <img src="docs/screenshots/inicio-desktop.png" alt="Tela inicial no desktop, com o título Buscar Animes e o campo de busca" width="68%" />
+  &nbsp;
+  <img src="docs/screenshots/inicio-mobile.png" alt="Tela inicial no celular, com o formulário de busca em coluna" width="22%" />
+</p>
 
-Este projeto tem um valor especial na minha trajetória. Ele nasceu originalmente em **2024**, desenvolvido como parte do desafio da **Imersão Dev Front-End com Google Gemini da Alura**. Em sua primeira versão (V1), a aplicação utilizava um arquivo `JSON` local para armazenar uma base de dados simples, focando nos conceitos iniciais de lógica e manipulação de DOM. A evolução contínua para esta Versão 2.0 reflete o meu amadurecimento como desenvolvedor, focado em entregar arquiteturas modernas, integrações reais de API e uma experiência de usuário (UI/UX) impecável.
+## Funcionalidades
 
----
+- **Busca por nome** pelo botão "Explorar" ou pela tecla Enter, com conteúdo adulto filtrado pela própria API (`sfw=true`).
+- **Cards de resultado** com capa, título, tipo, ano de lançamento, nota, sinopse resumida em quatro linhas e link para a página do anime no MyAnimeList.
+- **Paginação** com 12 resultados por vez e botão "Carregar mais".
+- **Busca na URL** (`?q=naruto`): dá para compartilhar o link de uma busca, e os botões voltar/avançar do navegador refazem as buscas anteriores.
+- **Estados de interface** para carregamento (skeleton), termo vazio, nenhum resultado e erros, com mensagens específicas para tempo esgotado (10 s), limite de requisições (HTTP 429), instabilidade do serviço (HTTP 5xx), falha de conexão e resposta inesperada, além do botão "Tentar novamente".
+- **Capa substituta** quando o anime não tem imagem ou ela não carrega.
+- **Acessibilidade:** landmarks semânticos, região de status lida por leitores de tela, links com nome descritivo, foco visível, navegação completa pelo teclado e respeito à preferência de movimento reduzido (`prefers-reduced-motion`).
+- **Layout responsivo** de 320 px até telas largas.
 
-## 🚀 Novidades da Versão 2.0 (Refatoração Profissional)
-Nesta versão, abandonamos a arquitetura básica de "estudos iniciais" para entregar um real portfólio web, amadurecido com:
+<details>
+<summary>Estado de carregamento</summary>
 
-- 📶 **Consumo Inteligente de Web API**: Desativamos antigas simulações de arquivos de texto locais vazios. A robustez da plataforma agora interliga diretamente com a [Jikan API](https://jikan.moe/) (Base Oficial do *MyAnimeList*). Puxe capas autênticas, scores e sinopses dinâmicas dentre milhares de animes.
-- 🎨 **Dark Mode & Glassmorphism Premium**: Adeus estilo chapado! Lapidação visual interativa extrema usando o "Efeito Tela de Vidro" (desfoque e iluminações de borda nativas css), em conjunto de paletas noturnas espaciais contrastadas com botão Âmbar sofisticado.
-- 💀 **Skeleton Screens & Empty States**: Telas vazias irritantes já não atrapalham a navegação. Seguindo práticas de UX das grandes empresas (Netflix, YouTube): toda espera aciona *shimmering cards dinâmicos simulados* durante descargas demoradas da API, além de caixas ricas e charmosas informando mensagens de esgotamento.
-- ⚡ **Antispam & Busca Ergonômica**: Responsividade de interação estendida ao permitir procura natural com submissão via **Tecla Enter**, e escudos anti-flood criados via Debouncing e controle assíncrono evitam telas mortas sob pressão massiva do usuário.
+![Grade de cards skeleton exibida enquanto a busca por "naruto" carrega](docs/screenshots/carregando-desktop.png)
 
----
+</details>
 
-## 🛠️ Tecnologias e Implementações
+## Tecnologias
 
-* **Semântica HTML5**: Todo o projeto migrou estruturas frágeis por formulários flexíveis, fazendo com que o Input nativo `type="search"` suporte melhor leitores e teclados de celular em harmonia.
-* **CSS3 Elegante & Rígido**: Todo o sistema constrói fluidez sob `Flexbox` e `Grid` com reações via animações base `@keyframes`. Introdução fundamental do `Aspect-Ratio` trancou os alinhamentos forçando a grade paralela que as fotos do site de anime se encaixem cirurgicamente independente do fator original.
-* **JavaScript (ES6+) Vanilla Assíncrono**: As caóticas repetições foram varridas pelo mapeamento funcional (`.map`, `.slice`, `join('')`) e integração fluída nos métodos de requisições baseados fielmente entre `async / await` para gerir o Fetch API.
+| Ferramenta                                                                              | Uso no projeto                                                        |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [React 19](https://react.dev/)                                                          | Interface declarativa em componentes                                  |
+| [TypeScript](https://www.typescriptlang.org/)                                           | Tipagem da resposta da API, que tem vários campos que podem ser nulos |
+| [Vite 8](https://vite.dev/)                                                             | Servidor de desenvolvimento e build de produção                       |
+| [Tailwind CSS 4](https://tailwindcss.com/)                                              | Estilos utilitários e tokens de tema (`@theme`)                       |
+| [Vitest](https://vitest.dev/) + [Testing Library](https://testing-library.com/) + jsdom | Testes de unidade, de hook e de componentes                           |
+| [Oxlint](https://oxc.rs/) e [Prettier](https://prettier.io/)                            | Lint e formatação (com ordenação automática das classes Tailwind)     |
+| GitHub Actions                                                                          | Lint, formatação, testes e build a cada push e pull request           |
+| [Vercel](https://vercel.com/)                                                           | Hospedagem                                                            |
 
----
+Não há bibliotecas de roteamento, de estado global ou de requisições: o app tem uma única tela, e `useReducer` + `fetch` resolvem o necessário.
 
-## ⚙️ Como Utilizar
-Para usar ativamente as bases de dados em sua própria máquina, siga os passos mínimos:
+## Decisões técnicas
 
-1. **Clone o repositório**:  
-   `git clone https://github.com/gabrielxsj/Buscar_Animes.git`
-2. **Abra o ambiente local** no seu editor de código predileto (ex: VS Code).
-3. **Execute o projeto**: Não precisa instalar NPM nem nada pesado. Apenas habilite alguma porta clicando no *Live Server* de seu editor ou abra o arquivo `index.html` diretamente em um navegador.
-4. Digite "Naruto, Death Note" ou tente pesquisar sua infância e clique `Enter`!
+- **A última busca sempre vence.** Cada requisição usa um `AbortController`. Uma nova busca, o "Carregar mais" ou a saída da tela cancelam a requisição anterior, e respostas atrasadas são descartadas. Assim o resultado exibido sempre corresponde ao termo do campo de busca ([`useAnimeSearch.ts`](src/hooks/useAnimeSearch.ts)).
+- **Timeout próprio de 10 segundos**, combinado com o cancelamento externo sem depender de `AbortSignal.any`, que não existe no Safari anterior ao 17.4 ([`jikan.ts`](src/services/jikan.ts)).
+- **Dados validados na entrada.** A resposta da API passa por uma normalização que trata campos ausentes e aceita apenas capas `https` e links do MyAnimeList, o que bloqueia URLs como `javascript:` ([`normalizeAnime.ts`](src/utils/normalizeAnime.ts)). Todo texto é renderizado pelo React como texto, e o lint proíbe `dangerouslySetInnerHTML`.
+- **Erros tipados** (`JikanHttpError`, `JikanResponseError`, `RequestTimeoutError`) traduzidos em mensagens claras para o usuário ([`searchErrors.ts`](src/utils/searchErrors.ts)).
+- **Identidade visual preservada.** Cores, fontes e o efeito de vidro da versão original viraram tokens do Tailwind em [`index.css`](src/index.css).
 
----
+## Estrutura
 
-## 🤝 Contribuições
+```text
+src/
+├── components/   # Header, SearchForm, SearchResults, AnimeCard, CoverImage, LoadMore...
+├── hooks/        # useAnimeSearch: estado da busca, paginação e cancelamento
+├── services/     # jikan.ts: requisição, timeout e erros da API
+├── types/        # Tipos da resposta da Jikan e do modelo exibido
+├── utils/        # Normalização, mensagens de erro, formatação e sincronização com a URL
+├── test/         # Configuração e dados de teste
+├── App.tsx
+├── main.tsx
+└── index.css     # Tailwind, tokens de tema e estilos base
+```
 
-Sinta-se à vontade para contribuir com o projeto! Se você encontrar algum bug, tiver sugestões de melhoria ou quiser adicionar funcionalidades, abra um pull request.
+## Como executar localmente
 
-> **Aviso:** Esta aplicação está em constante desenvolvimento. Novas funcionalidades e melhorias serão adicionadas com o tempo.
+Pré-requisitos: [Node.js](https://nodejs.org/) 24 LTS (versão indicada em `.nvmrc`; o mínimo aceito é 22.12) e npm.
 
----
+```bash
+git clone https://github.com/gabrielrizzoo/Buscar-Animes.git
+cd Buscar-Animes
+npm install
+npm run dev
+```
 
-## 👨‍💻 Créditos e Contato
+Abra o endereço exibido no terminal (por padrão, <http://localhost:5173>). Não há variáveis de ambiente nem chave de API: a Jikan é pública.
 
-Toda a arquitetura, visão de direção de arte UI/UX sofisticada e desenvolvimento em lógicas assíncronas do projeto v2.0 foram encabeçados e construídos por:
+## Scripts
 
-**Gabriel Rizzo**  
-💼 [Reaja à publicação e se conecte comigo no LinkedIn!](https://www.linkedin.com/in/gabriel-rizzo-352052266/)
+| Comando                | O que faz                                                       |
+| ---------------------- | --------------------------------------------------------------- |
+| `npm run dev`          | Inicia o servidor de desenvolvimento                            |
+| `npm run build`        | Verifica os tipos (`tsc`) e gera o build de produção em `dist/` |
+| `npm run preview`      | Serve o build de produção localmente                            |
+| `npm test`             | Executa os testes uma vez                                       |
+| `npm run test:watch`   | Executa os testes em modo observação                            |
+| `npm run lint`         | Analisa o código com Oxlint                                     |
+| `npm run format`       | Formata os arquivos com Prettier                                |
+| `npm run format:check` | Confere a formatação sem alterar arquivos                       |
+
+## Testes
+
+Os testes usam Vitest, Testing Library e uma API Jikan simulada, então não dependem da internet. Eles cobrem:
+
+- a montagem da URL da requisição e cada tipo de erro (HTTP, JSON inválido, falha de rede, timeout e cancelamento);
+- a normalização dos dados, incluindo campos ausentes e URLs inseguras;
+- o hook de busca: busca concorrente (a mais recente vence), "Carregar mais", nova tentativa após erro e cancelamento ao desmontar;
+- os componentes e o fluxo completo: Enter, skeleton, resultados, URL e título da página, botão voltar do navegador, termo vazio, nenhum resultado, erro com nova tentativa, paginação e foco do teclado.
+
+```bash
+npm test
+```
+
+## Build e publicação
+
+`npm run build` gera os arquivos estáticos em `dist/`. O deploy é feito pela Vercel, configurada em [`vercel.json`](vercel.json) (preset Vite, saída em `dist/`). O workflow [`ci.yml`](.github/workflows/ci.yml) roda lint, verificação de formatação, testes e build em cada pull request e em cada push na `main`.
+
+## Limitações conhecidas
+
+- **Dependência da API Jikan.** É um serviço gratuito e não oficial, com limite de 3 requisições por segundo e 60 por minuto, e que pode ficar fora do ar. Nesses casos o app mostra uma mensagem e permite tentar de novo, mas não tem fonte de dados alternativa.
+- **Idioma dos dados.** Títulos e sinopses vêm do MyAnimeList como estão, geralmente em inglês ou em japonês romanizado, sem tradução.
+- **Sem filtros.** A busca usa apenas o parâmetro `q` da API; filtros por tipo, gênero e ordenação ainda não foram implementados.
+
+## Próximos passos possíveis
+
+- Filtros por tipo e ordenação, usando os parâmetros `type`, `order_by` e `sort` da Jikan.
+- Lista de favoritos salva no navegador.
+- Página ou modal de detalhes do anime (`GET /anime/{id}`).
+
+## Histórico
+
+Este projeto nasceu em 2024 na **Imersão Dev Front-End com Google Gemini, da Alura**. A primeira versão buscava em uma lista fixa de três animes guardada em `dados.js` e servia para praticar lógica e manipulação do DOM.
+
+Em 2026, o app passou a consultar a API Jikan e ganhou o visual escuro com efeito de vidro, ainda em HTML, CSS e JavaScript puros. Na etapa seguinte, uma auditoria corrigiu problemas de segurança e de comportamento (injeção de HTML, falta de timeout, buscas concorrentes e o resumo da sinopse), e a interface foi migrada para React, TypeScript e Tailwind CSS. A versão em JavaScript puro continua disponível no histórico do Git, na tag `v1-vanilla`.
+
+## Créditos
+
+Desenvolvido por **Gabriel Rizzo**: [LinkedIn](https://www.linkedin.com/in/gabriel-rizzo-352052266/).
+
+Dados fornecidos pelo [MyAnimeList](https://myanimelist.net/) por meio da [API Jikan](https://jikan.moe/). Este projeto não tem vínculo com nenhum dos dois serviços.
+
+Sugestões e correções são bem-vindas por meio de issues e pull requests.

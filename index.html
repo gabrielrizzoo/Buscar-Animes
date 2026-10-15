@@ -1,43 +1,50 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=3.0">
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Buscar Animes</title>
-</head>
+    <meta
+      name="description"
+      content="Busque animes pelo título e veja capa, tipo, ano, nota e sinopse com dados do MyAnimeList, consultados pela API Jikan."
+    />
+    <meta name="theme-color" content="#0F172A" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href="https://buscar-animes.vercel.app/" />
 
-<body>
-    <main class="main-container">
-        <header class="header">
-            <h1>Buscar Animes</h1>
-            <p class="subtitle">Faça buscas instantâneas no maior diretório de animes do mundo</p>
-        </header>
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="Buscar Animes" />
+    <meta property="og:title" content="Buscar Animes" />
+    <meta
+      property="og:description"
+      content="Busque animes pelo título e veja capa, tipo, ano, nota e sinopse com dados do MyAnimeList."
+    />
+    <meta property="og:url" content="https://buscar-animes.vercel.app/" />
+    <meta
+      property="og:image"
+      content="https://buscar-animes.vercel.app/og-image.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Tela inicial do Buscar Animes com o campo de busca"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
 
-        <section class="search-section">
-            <form id="search-form" class="search-form">
-                <label for="campo-pesquisa" class="sr-only">Digite o título de um Anime</label>
-                <input type="search" placeholder="Ex: One Piece, Naruto..." id="campo-pesquisa" required>
-                <button type="submit">Explorar</button>
-            </form>
-        </section>
-
-        <section class="resultados-pesquisa" id="resultados-pesquisa" aria-live="polite">
-            <!-- Loading ou Resultados renderizados dinamicamente via JS -->
-        </section>
-    </main>
-
-    <footer>
-        <p>2024 - Buscar Animes. Todos os Direitos Reservados.</p>
-        <p>Desenvolvido usando API Jikan (MyAnimeList)</p>
-    </footer>
-
-    <script src="app.js"></script>
-</body>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Inter:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <p>Ative o JavaScript no navegador para usar o Buscar Animes.</p>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
